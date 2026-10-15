@@ -1,0 +1,51 @@
+name: Create a Quadraticc release
+description: Register a release with an explicit version or let Quadraticc allocate the next version.
+author: Quadraticc
+branding:
+  icon: package
+  color: green
+inputs:
+  url:
+    description: Quadraticc HTTPS origin, such as https://quadrati.cc.
+    required: true
+  token:
+    description: Project CI credential stored in GitHub Actions secrets.
+    required: true
+  workspace-id:
+    description: Quadraticc workspace UUID.
+    required: true
+  project-id:
+    description: Quadraticc project UUID.
+    required: true
+  version:
+    description: Explicit release version. Supply exactly one of version or version-prefix.
+  version-prefix:
+    description: Series for server-allocated versions, such as 0.0. Supply exactly one of version or version-prefix.
+  commit-sha:
+    description: Full commit SHA of the built artifact. Defaults to the workflow commit.
+    default: ${{ github.sha }}
+  image-reference:
+    description: Optional image reference; a digest is recommended for deployable images.
+  release-notes:
+    description: Optional notes. When empty, a GitHub run and attempt note is generated.
+  link-workflow-run:
+    description: Associate this GitHub.com run with a repository already connected to this Quadraticc project.
+    default: 'false'
+outputs:
+  release-id:
+    description: Quadraticc release UUID.
+  version:
+    description: Created or reused release version.
+  commit-sha:
+    description: Commit SHA recorded on the release.
+  image-reference:
+    description: Image reference recorded on the release, or an empty string.
+  release-notes:
+    description: Notes recorded on the release.
+  url:
+    description: Link to this release in Quadraticc.
+  created:
+    description: 'true for a new release; false when numbered creation reuses an identical release.'
+runs:
+  using: node24
+  main: dist/index.js
