@@ -21,7 +21,6 @@ Add this step after your successful build:
   id: release
   uses: quadraticc/release-action@v1
   with:
-    url: https://quadrati.cc
     token: ${{ secrets.QUADRATICC_TOKEN }}
     workspace-id: ${{ vars.WORKSPACE_ID }}
     project-id: ${{ vars.PROJECT_ID }}
@@ -50,7 +49,7 @@ set the surrounding workflow's permissions according to its build requirements.
 
 | Name | Required | Meaning |
 | --- | --- | --- |
-| `url` | Yes | Quadraticc HTTPS origin, such as `https://quadrati.cc`. A custom host and port are supported. No path, credentials, query or fragment. |
+| `url` | No | Quadraticc HTTPS origin. Defaults to `https://quadrati.cc`. A custom host and port are supported. No path, credentials, query or fragment. |
 | `token` | Yes | Project-scoped `qcc_...` CI credential, passed from GitHub Secrets. This is not a GitHub token. |
 | `workspace-id` | Yes | Workspace UUID. |
 | `project-id` | Yes | Project UUID. |

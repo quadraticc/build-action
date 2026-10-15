@@ -6,8 +6,8 @@ branding:
   color: green
 inputs:
   url:
-    description: Quadraticc HTTPS origin, such as https://quadrati.cc.
-    required: true
+    description: Quadraticc HTTPS origin. Defaults to https://quadrati.cc.
+    default: https://quadrati.cc
   token:
     description: Project CI credential stored in GitHub Actions secrets.
     required: true
