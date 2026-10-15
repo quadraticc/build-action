@@ -172,23 +172,6 @@ Ubuntu, macOS and Windows with Node 24. It rebuilds the bundle and rejects stale
 or untracked distribution files. The remote OS matrix needs a first GitHub run;
 local testing alone does not establish those runner results.
 
-## First publication
-
-1. Create the public `quadraticc/release-action` repository and commit these files,
-   including `dist/`, on `main`.
-2. Push and wait for all three CI jobs to pass. Configure the checks as required
-   for merging subsequent changes.
-3. Test the action at that exact commit SHA against a disposable Quadraticc project.
-   Verify explicit creation, numbered creation/replay and optional workflow linking.
-4. Tag the verified commit `v1.0.0` and `v1`, push the tags, and publish the GitHub
-   release. Future compatible releases may advance `v1`; keep exact release tags
-   unchanged. Use a new major version for breaking inputs/outputs or behavior.
-5. Marketplace publication is optional and requires the account owner to accept
-   GitHub's applicable agreement. It is not necessary for `uses:` consumers.
-
-The action does not publish releases to GitHub or deploy an application. Its sole
-product mutation is creating a Quadraticc release through the project CI API.
-
 ## License
 
 MIT. Bundled dependency notices are in `dist/licenses.txt`.
