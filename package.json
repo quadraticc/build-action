@@ -21,7 +21,7 @@
     "@actions/core": "3.0.1"
   },
   "devDependencies": {
-    "@types/node": "24.19.2",
+    "@types/node": "26.6.5",
     "@vercel/ncc": "0.45.0",
     "selfsigned": "5.5.0",
     "typescript": "7.0.2",
