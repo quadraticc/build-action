@@ -4,6 +4,8 @@ export type Values = Record<string, string | undefined>;
 export type Environment = Record<string, string | undefined>;
 export interface WorkflowSource { repository_id: number; run_id: number }
 export interface Payload {
+  images?: Record<string, string>;
+  metadata?: Record<string, string>;
   version?: string;
   version_prefix?: string;
   commit_sha: string;
@@ -20,6 +22,8 @@ export interface Prepared {
   endpoint: URL;
 }
 export interface Result {
+  images: Record<string, string>;
+  metadata: Record<string, string>;
   id: string;
   version: string;
   commit: string;
@@ -47,6 +51,32 @@ function positiveID(value: string | undefined): number {
   return Number(value);
 }
 
+const metadataKey = /^[A-Za-z_][A-Za-z0-9_.-]{0,63}$/;
+const imageKey = /^[a-z][a-z0-9_-]{0,63}$/;
+const pinnedImage = /^[a-z0-9]+(?:[.-][a-z0-9]+)*(?::[0-9]{1,5})?\/[a-z0-9]+(?:(?:[._/]|__|-+)[a-z0-9]+)*@sha256:[a-f0-9]{64}$/;
+function mapInput(raw: string | undefined, field: 'images' | 'metadata'): Record<string, string> | undefined {
+  if (!raw) return undefined;
+  if (Buffer.byteLength(raw) > 32768) inputError(field, 'must be a bounded JSON object');
+  let object: unknown;
+  try {object = JSON.parse(raw);} catch {return inputError(field, 'must be a JSON object of string values');}
+  if (!object || typeof object !== 'object' || Array.isArray(object)) inputError(field, 'must be a JSON object of string values');
+  const entries = Object.entries(object as Record<string, unknown>);
+  if (entries.length > (field === 'images' ? 16 : 64)) inputError(field, 'has too many entries');
+  for (const [key, value] of entries) {
+    if (!(field === 'images' ? imageKey : metadataKey).test(key) || typeof value !== 'string' ||
+        !wellFormed(value) || value.includes('\0') || Buffer.byteLength(value) > (field === 'images' ? 2048 : 4096) ||
+        field === 'images' && !pinnedImage.test(value)) inputError(field, 'contains an invalid name or value; images require complete SHA-256 digest references');
+  }
+  return object as Record<string, string>;
+}
+function sameMap(actual: unknown, expected: Record<string, string> | undefined): boolean {
+  const wanted = expected ?? {};
+  if (actual == null) return Object.keys(wanted).length === 0;
+  return typeof actual === 'object' && !Array.isArray(actual) &&
+    Object.keys(actual).length === Object.keys(wanted).length &&
+    Object.entries(wanted).every(([key, value]) => Object.hasOwn(actual, key) && (actual as Record<string, unknown>)[key] === value);
+}
+
 export function prepare(values: Values, env: Environment): Prepared {
   const rawURL = values.url ?? '';
   let parsed: URL;
@@ -72,7 +102,11 @@ export function prepare(values: Values, env: Environment): Prepared {
   }
   const commit = values['commit-sha'] || env.GITHUB_SHA || '';
   if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(commit)) inputError('commit-sha', 'must be a full 40- or 64-character hexadecimal commit SHA');
-  const image = values['image-reference'] ?? '';
+  const images = mapInput(values.images, 'images');
+  const metadata = mapInput(values.metadata, 'metadata');
+  const image = values['image-reference'] || images?.web || '';
+  if (images?.web && image !== images.web) inputError('image-reference', 'must match the named web image when both are provided');
+  if (Buffer.byteLength(JSON.stringify([images ?? {}, metadata ?? {}])) > 12000) throw new ActionError('Encoded images and metadata must fit within 12000 bytes.');
   if (!wellFormed(image) || Buffer.byteLength(image) > 2048 || /[\r\n\0]/.test(image)) inputError('image-reference', 'must be at most 2048 UTF-8 bytes and contain no line breaks or NUL');
   let notes = values['build-notes'] ?? '';
   if (!notes && env.GITHUB_RUN_ID && env.GITHUB_RUN_ATTEMPT) {
@@ -87,6 +121,8 @@ export function prepare(values: Values, env: Environment): Prepared {
   const payload: Payload = {commit_sha: commit};
   if (version) payload.version = version; else payload.version_prefix = prefix;
   if (image) payload.image_reference = image;
+  if (images) payload.images = images;
+  if (metadata) payload.metadata = metadata;
   if (notes) payload.build_notes = notes;
   if (link === 'true') {
     if (env.GITHUB_SERVER_URL !== 'https://github.com') throw new ActionError('Workflow linking currently supports GitHub.com runs only.');
@@ -126,14 +162,15 @@ function acknowledged(prepared: Prepared, reply: Reply): Result {
       !validVersion(data.version) || data.commit_sha !== payload.commit_sha ||
       (data.image_reference ?? '') !== (payload.image_reference ?? '') ||
       (data.build_notes ?? '') !== (payload.build_notes ?? '') ||
+      !sameMap(data.images, payload.images) || !sameMap(data.metadata, payload.metadata) ||
       typeof data.created_at !== 'string' || !Number.isFinite(Date.parse(data.created_at))) throw mismatch();
   if (payload.version ? data.version !== payload.version :
     !data.version.startsWith(payload.version_prefix!) || !/^(0|[1-9][0-9]*)$/.test(data.version.slice(payload.version_prefix!.length))) throw mismatch();
   const source = data.workflow_run as Record<string, unknown> | null | undefined;
   if (payload.workflow_run ? !source || source.repository_id !== payload.workflow_run.repository_id || source.run_id !== payload.workflow_run.run_id : source != null) throw mismatch();
-  return {id: data.id, version: data.version, commit: payload.commit_sha,
+  return {id: data.id, version: data.version, commit: payload.commit_sha, images: payload.images ?? {}, metadata: payload.metadata ?? {},
     image: payload.image_reference ?? '', notes: payload.build_notes ?? '', created: reply.status === 201,
-    url: `${prepared.origin}/workspaces/${prepared.workspace}/projects/${prepared.project}?view=builds#build-${data.id}`};
+    url: `${prepared.origin}/app/workspaces/${prepared.workspace}/projects/${prepared.project}/builds?build=${data.id}`};
 }
 
 export async function createBuild(values: Values, env: Environment,

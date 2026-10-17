@@ -57,6 +57,8 @@ set the surrounding workflow's permissions according to its build requirements.
 | `version-prefix` | One version input | Canonical `major.minor.` series, such as `0.0.` or `1.2.`. |
 | `commit-sha` | No | Full 40- or 64-character artifact commit SHA. Defaults to `${{ github.sha }}`. Override when the build uses a different commit. |
 | `image-reference` | No | Image reference, at most 2048 UTF-8 bytes. Use the pushed digest for deployable images. |
+| `images` | No | JSON object containing up to 16 named SHA-256 digest references, such as `web` and `migrations`. |
+| `metadata` | No | JSON object containing up to 64 non-secret string values, such as `migration_name`. |
 | `build-notes` | No | Notes, at most 16384 UTF-8 bytes. Empty input generates `GitHub Actions run <id>, attempt <attempt>.` when that context is available. |
 | `link-workflow-run` | No | `true` to associate the current GitHub.com repository/run with the build. Defaults to `false`. |
 
@@ -75,6 +77,27 @@ This example assumes your image build/push step is named `build` and exposes a
 `digest` output. Replace the repository with the one you actually pushed.
 Quadraticc records the reference; it does not verify or host the image.
 
+To register multiple images and migration metadata (requires server migration
+`0018_build_artifacts.sql`), add:
+
+```yaml
+images: |
+  {
+    "web": ${{ toJSON(format('{0}/web@{1}', vars.ECR_REGISTRY, steps.web.outputs.digest)) }},
+    "migrations": ${{ toJSON(format('{0}/migrations@{1}', vars.ECR_REGISTRY, steps.migrations.outputs.digest)) }}
+  }
+metadata: |
+  {"migration_name": ${{ toJSON(steps.migration_info.outputs.name) }}}
+```
+
+The named `web` image supplies `image-reference` when that input is omitted.
+If both are supplied they must match. Images and metadata are immutable and
+participate in numbered-build replay identity. Their combined encoded size is
+limited to 12000 bytes; metadata values may be at most 4096 UTF-8 bytes each.
+Metadata is readable by build viewers. Store credentials in environment secrets.
+Each image must be a complete registry/repository reference pinned with
+`@sha256:<64 lowercase hexadecimal characters>`.
+
 ## Outputs
 
 | Name | Value |
@@ -84,6 +107,8 @@ Quadraticc records the reference; it does not verify or host the image.
 | `commit-sha` | Recorded commit SHA. |
 | `image-reference` | Recorded image reference, or an empty string. |
 | `build-notes` | Recorded notes. |
+| `images` | Named image references as JSON; `{}` when absent. |
+| `metadata` | Build metadata as JSON; `{}` when absent. |
 | `url` | Link to the build in Quadraticc's project build history. |
 | `created` | String `true` for creation; `false` when numbered creation reuses an identical build. |
 
@@ -113,7 +138,7 @@ version returns `409` and fails the action. A conflict is never silently accepte
 Automatic versions use `POST .../builds/next`. The server allocates one greater
 than the highest canonical version in the chosen series, starting at patch 1.
 Exact metadata replay in that project/series returns the existing build with
-`200` and `created=false`. Commit, image, notes and optional source IDs all
+`200` and `created=false`. Commit, image, named images, metadata, notes and optional source IDs all
 participate in replay identity.
 
 Default notes include the run and attempt, so rerunning a GitHub job usually

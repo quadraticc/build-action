@@ -26,6 +26,10 @@ inputs:
     default: ${{ github.sha }}
   image-reference:
     description: Optional image reference; a digest is recommended for deployable images.
+  images:
+    description: Optional JSON object of named, digest-pinned images, such as web and migrations.
+  metadata:
+    description: Optional JSON object of non-secret string metadata, such as migration_name.
   build-notes:
     description: Optional notes. When empty, a GitHub run and attempt note is generated.
   link-workflow-run:
@@ -40,6 +44,10 @@ outputs:
     description: Commit SHA recorded on the build.
   image-reference:
     description: Image reference recorded on the build, or an empty string.
+  images:
+    description: Named image references recorded on the build, as a JSON object.
+  metadata:
+    description: Build metadata recorded on the build, as a JSON object.
   build-notes:
     description: Notes recorded on the build.
   url:

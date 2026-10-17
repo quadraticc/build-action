@@ -26,7 +26,7 @@ test('token masking precedes the only request, and validated results become acti
   assert.equal(core.outputs.get('created'), 'false');
   assert.equal(core.outputs.get('version'), '0.0.7');
   assert.equal(core.outputs.get('commit-sha'), env.GITHUB_SHA);
-  assert.equal(core.outputs.size, 7);
+  assert.equal(core.outputs.size, 9);
   assert.ok(!JSON.stringify(core.events.slice(1)).includes(values.token));
 });
 
