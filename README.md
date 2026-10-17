@@ -37,8 +37,8 @@ For an explicit version, replace `version-prefix` with `version: '1.2.3'`.
 Supply exactly one of these inputs. Automatic numbering happens atomically in
 Quadraticc; the action never reads builds to calculate a version itself.
 
-The `@v2` example becomes usable after the maintainer publishes that tag. Customers
-can pin the action to a reviewed full commit SHA for an immutable reference.
+Use `quadraticc/build-action@v1`, or pin a reviewed full commit SHA for an
+immutable reference.
 
 The action runs on the GitHub runner's Node 24 runtime and has no shell, Docker,
 Python or checkout requirement. Keep self-hosted runners current enough to support
@@ -178,6 +178,6 @@ MIT. Bundled dependency notices are in `dist/licenses.txt`.
 
 ## Server compatibility
 
-This v2 action targets the epoch-7 Builds API (`/builds`, `build_notes`).
-Upgrade the Quadraticc server before using it. Version 1 targets the former API.
-Inputs/outputs use `build-notes` and `build-id`; the repository name stays unchanged.
+This v1 action targets the epoch-7 Builds API (`/builds`, `build_notes`).
+Upgrade the Quadraticc server before using it.
+Inputs/outputs use `build-notes` and `build-id`.
