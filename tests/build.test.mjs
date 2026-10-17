@@ -1,37 +1,37 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {prepare, createRelease} from '../build/release.js';
+import {prepare, createBuild} from '../build/build.js';
 import {ActionError} from '../build/http.js';
-import {values, env, releaseID, acknowledgement} from './fixtures.mjs';
+import {values, env, buildID, acknowledgement} from './fixtures.mjs';
 
 test('numbering is allocated by one POST to the project API, with the exact artifact commit and image', async () => {
   let calls = 0;
-  const result = await createRelease({...values, url: 'https://quadrati.cc/'}, env, async (url, token, body) => {
+  const result = await createBuild({...values, url: 'https://quadrati.cc/'}, env, async (url, token, body) => {
     calls++;
-    assert.equal(url.href, `https://quadrati.cc/api/v1/workspaces/${values['workspace-id']}/projects/${values['project-id']}/releases/next`);
+    assert.equal(url.href, `https://quadrati.cc/api/v1/workspaces/${values['workspace-id']}/projects/${values['project-id']}/builds/next`);
     assert.equal(token, values.token);
     const payload = JSON.parse(body);
     assert.deepEqual(payload, {version_prefix: '0.0.', commit_sha: env.GITHUB_SHA,
-      image_reference: values['image-reference'], release_notes: 'GitHub Actions run 123, attempt 1.'});
+      image_reference: values['image-reference'], build_notes: 'GitHub Actions run 123, attempt 1.'});
     return acknowledgement(payload);
   });
   assert.equal(calls, 1);
-  assert.equal(result.id, releaseID);
+  assert.equal(result.id, buildID);
   assert.equal(result.version, '0.0.7');
   assert.equal(result.created, true);
-  assert.equal(result.url, `https://quadrati.cc/workspaces/${values['workspace-id']}/projects/${values['project-id']}?view=releases#release-${releaseID}`);
+  assert.equal(result.url, `https://quadrati.cc/workspaces/${values['workspace-id']}/projects/${values['project-id']}?view=builds#build-${buildID}`);
 });
 
 test('explicit versions preserve custom notes and commits, including a 64-character SHA', async () => {
-  const notes = 'Built "server"\n$(arbitrary shell text)\n::warning::still plain release notes';
-  const input = {...values, version: 'v1.2.3', 'version-prefix': '', 'commit-sha': 'B'.repeat(64), 'release-notes': notes};
-  const result = await createRelease(input, env, async (url, _token, body) => {
-    assert.ok(url.pathname.endsWith('/releases'));
+  const notes = 'Built "server"\n$(arbitrary shell text)\n::warning::still plain build notes';
+  const input = {...values, version: 'v1.2.3', 'version-prefix': '', 'commit-sha': 'B'.repeat(64), 'build-notes': notes};
+  const result = await createBuild(input, env, async (url, _token, body) => {
+    assert.ok(url.pathname.endsWith('/builds'));
     const payload = JSON.parse(body);
     assert.equal(payload.version, 'v1.2.3');
     assert.equal(payload.version_prefix, undefined);
     assert.equal(payload.commit_sha, 'B'.repeat(64));
-    assert.equal(payload.release_notes, notes);
+    assert.equal(payload.build_notes, notes);
     return acknowledgement(payload);
   });
   assert.equal(result.notes, notes);
@@ -40,7 +40,7 @@ test('explicit versions preserve custom notes and commits, including a 64-charac
 
 test('numbered exact replay exposes created=false and does not perform any retrieval', async () => {
   let calls = 0;
-  const result = await createRelease(values, env, async (_url, _token, body) => {
+  const result = await createBuild(values, env, async (_url, _token, body) => {
     calls++;
     return acknowledgement(JSON.parse(body), 200);
   });
@@ -49,22 +49,22 @@ test('numbered exact replay exposes created=false and does not perform any retri
 });
 
 test('different GitHub run attempts change default notes, while custom notes remain stable', () => {
-  assert.notEqual(prepare(values, env).payload.release_notes, prepare(values, {...env, GITHUB_RUN_ATTEMPT: '2'}).payload.release_notes);
-  const custom = {...values, 'release-notes': 'Stable build identity'};
-  assert.equal(prepare(custom, env).payload.release_notes, prepare(custom, {...env, GITHUB_RUN_ATTEMPT: '2'}).payload.release_notes);
+  assert.notEqual(prepare(values, env).payload.build_notes, prepare(values, {...env, GITHUB_RUN_ATTEMPT: '2'}).payload.build_notes);
+  const custom = {...values, 'build-notes': 'Stable build identity'};
+  assert.equal(prepare(custom, env).payload.build_notes, prepare(custom, {...env, GITHUB_RUN_ATTEMPT: '2'}).payload.build_notes);
 });
 
 test('plain registration needs no GitHub App, GitHub token or repository/run identity', async () => {
   const input = {...values, 'commit-sha': env.GITHUB_SHA};
   const prepared = prepare(input, {});
   assert.equal(prepared.payload.workflow_run, undefined);
-  assert.equal(prepared.payload.release_notes, undefined);
-  const result = await createRelease(input, {}, async (_url, _token, body) => acknowledgement(JSON.parse(body)));
+  assert.equal(prepared.payload.build_notes, undefined);
+  const result = await createBuild(input, {}, async (_url, _token, body) => acknowledgement(JSON.parse(body)));
   assert.equal(result.version, '0.0.7');
 });
 
 test('workflow association is explicitly opt-in and uses this GitHub.com repository/run context', async () => {
-  const result = await createRelease({...values, 'link-workflow-run': 'true'}, env, async (_url, _token, body) => {
+  const result = await createBuild({...values, 'link-workflow-run': 'true'}, env, async (_url, _token, body) => {
     const payload = JSON.parse(body);
     assert.deepEqual(payload.workflow_run, {repository_id: 42, run_id: 123});
     return acknowledgement(payload);
@@ -89,12 +89,12 @@ test('unsafe or invalid inputs fail without making a network request or reflecti
     {version: ' private ', 'version-prefix': ''}, {version: 'x\u0085private', 'version-prefix': ''},
     {version: '😀'.repeat(26), 'version-prefix': ''}, {version: '\ud800', 'version-prefix': ''},
     {'image-reference': 'x\nprivate'}, {'image-reference': '😀'.repeat(513)},
-    {'release-notes': 'x\0private'}, {'release-notes': '😀'.repeat(4097)},
-    {'release-notes': '\n'.repeat(16384)}, {'link-workflow-run': 'yes'},
+    {'build-notes': 'x\0private'}, {'build-notes': '😀'.repeat(4097)},
+    {'build-notes': '\n'.repeat(16384)}, {'link-workflow-run': 'yes'},
   ];
   for (let i = 0; i < cases.length; i++) await t.test(`invalid input ${i + 1}`, async () => {
     let calls = 0;
-    await assert.rejects(createRelease({...values, ...cases[i]}, env, async () => {calls++; throw new Error('unexpected request');}), error => {
+    await assert.rejects(createBuild({...values, ...cases[i]}, env, async () => {calls++; throw new Error('unexpected request');}), error => {
       assert.ok(error instanceof ActionError);
       assert.ok(!error.message.includes('private'));
       assert.ok(!error.message.includes(values.token));
@@ -106,19 +106,19 @@ test('unsafe or invalid inputs fail without making a network request or reflecti
 
 test('UUID input case is normalized, UTF-8 byte limits are respected, and optional metadata can be absent', () => {
   const input = {...values, version: '😀'.repeat(25), 'version-prefix': '',
-    'workspace-id': 'ABCDEFAB-ABCD-ABCD-ABCD-ABCDEFABCDEF', 'image-reference': '', 'release-notes': ''};
+    'workspace-id': 'ABCDEFAB-ABCD-ABCD-ABCD-ABCDEFABCDEF', 'image-reference': '', 'build-notes': ''};
   const prepared = prepare(input, {'GITHUB_SHA': env.GITHUB_SHA});
   assert.ok(prepared.endpoint.pathname.includes('abcdefab-abcd-abcd-abcd-abcdefabcdef'));
   assert.equal(prepared.payload.version, input.version);
   assert.equal(prepared.payload.image_reference, undefined);
-  assert.equal(prepared.payload.release_notes, undefined);
+  assert.equal(prepared.payload.build_notes, undefined);
 });
 
 test('HTTP failures remain failures, including explicit conflicts and redirects; provider text stays private', async t => {
   for (const status of [200, 204, 301, 302, 303, 307, 308, 400, 401, 403, 404, 409, 415, 429, 500, 503]) {
     await t.test(`HTTP ${status}`, async () => {
       let calls = 0;
-      await assert.rejects(createRelease({...values, version: '1.2.3', 'version-prefix': ''}, env, async () => {
+      await assert.rejects(createBuild({...values, version: '1.2.3', 'version-prefix': ''}, env, async () => {
         calls++;
         return {status, contentType: 'text/plain', body: 'private-provider-output ' + values.token};
       }), error => {
@@ -135,27 +135,27 @@ test('HTTP failures remain failures, including explicit conflicts and redirects;
 test('a successful status must acknowledge exactly the submitted metadata and expected version series', async t => {
   const changes = [
     {id: 'invalid'}, {version: '9.9.9'}, {version: '0.0.01'}, {version: '0.0.1\nprivate'},
-    {commit_sha: 'b'.repeat(40)}, {image_reference: 'other-image'}, {release_notes: 'private notes'},
+    {commit_sha: 'b'.repeat(40)}, {image_reference: 'other-image'}, {build_notes: 'private notes'},
     {created_at: 'invalid'}, {workflow_run: {repository_id: 42, run_id: 123}},
   ];
   for (let i = 0; i < changes.length; i++) await t.test(`mismatch ${i + 1}`, async () => {
-    await assert.rejects(createRelease(values, env, async (_url, _token, body) => acknowledgement(JSON.parse(body), 201, changes[i])), /mismatched release acknowledgement/);
+    await assert.rejects(createBuild(values, env, async (_url, _token, body) => acknowledgement(JSON.parse(body), 201, changes[i])), /mismatched build acknowledgement/);
   });
   for (const reply of [
     {status: 201, contentType: 'text/html', body: '<h1>private output</h1>'},
     {status: 201, contentType: 'application/json', body: 'private invalid JSON'},
     {status: 201, contentType: 'application/json', body: '[]'},
     {status: 201, contentType: 'application/json', body: 'null'},
-  ]) await assert.rejects(createRelease(values, env, async () => reply), /mismatched release acknowledgement/);
-  await assert.rejects(createRelease({...values, 'link-workflow-run': 'true'}, env,
-    async (_url, _token, body) => acknowledgement(JSON.parse(body), 201, {workflow_run: {repository_id: 999, run_id: 123}})), /mismatched release acknowledgement/);
+  ]) await assert.rejects(createBuild(values, env, async () => reply), /mismatched build acknowledgement/);
+  await assert.rejects(createBuild({...values, 'link-workflow-run': 'true'}, env,
+    async (_url, _token, body) => acknowledgement(JSON.parse(body), 201, {workflow_run: {repository_id: 999, run_id: 123}})), /mismatched build acknowledgement/);
 });
 
 test('interrupted creation is never automatically repeated', async () => {
   let calls = 0;
-  await assert.rejects(createRelease(values, env, async () => {
+  await assert.rejects(createBuild(values, env, async () => {
     calls++;
-    throw new ActionError('Lost acknowledgement; release may already exist.');
+    throw new ActionError('Lost acknowledgement; build may already exist.');
   }), /may already exist/);
   assert.equal(calls, 1);
 });

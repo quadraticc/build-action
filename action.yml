@@ -1,5 +1,5 @@
-name: Create a Quadraticc release
-description: Register a release with an explicit version or let Quadraticc allocate the next version.
+name: Create a Quadraticc build
+description: Register a build with an explicit version or let Quadraticc allocate the next version.
 author: Quadraticc
 branding:
   icon: package
@@ -18,7 +18,7 @@ inputs:
     description: Quadraticc project UUID.
     required: true
   version:
-    description: Explicit release version. Supply exactly one of version or version-prefix.
+    description: Explicit build version. Supply exactly one of version or version-prefix.
   version-prefix:
     description: Series for server-allocated versions, such as 0.0. Supply exactly one of version or version-prefix.
   commit-sha:
@@ -26,26 +26,26 @@ inputs:
     default: ${{ github.sha }}
   image-reference:
     description: Optional image reference; a digest is recommended for deployable images.
-  release-notes:
+  build-notes:
     description: Optional notes. When empty, a GitHub run and attempt note is generated.
   link-workflow-run:
     description: Associate this GitHub.com run with a repository already connected to this Quadraticc project.
     default: 'false'
 outputs:
-  release-id:
-    description: Quadraticc release UUID.
+  build-id:
+    description: Quadraticc build UUID.
   version:
-    description: Created or reused release version.
+    description: Created or reused build version.
   commit-sha:
-    description: Commit SHA recorded on the release.
+    description: Commit SHA recorded on the build.
   image-reference:
-    description: Image reference recorded on the release, or an empty string.
-  release-notes:
-    description: Notes recorded on the release.
+    description: Image reference recorded on the build, or an empty string.
+  build-notes:
+    description: Notes recorded on the build.
   url:
-    description: Link to this release in Quadraticc.
+    description: Link to this build in Quadraticc.
   created:
-    description: 'true for a new release; false when numbered creation reuses an identical release.'
+    description: 'true for a new build; false when numbered creation reuses an identical build.'
 runs:
   using: node24
   main: dist/index.js

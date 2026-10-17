@@ -8,11 +8,11 @@ export const env = {
   GITHUB_SHA: 'a'.repeat(40), GITHUB_RUN_ID: '123', GITHUB_RUN_ATTEMPT: '1',
   GITHUB_REPOSITORY_ID: '42', GITHUB_SERVER_URL: 'https://github.com',
 };
-export const releaseID = '33333333-3333-3333-3333-333333333333';
+export const buildID = '33333333-3333-3333-3333-333333333333';
 export function acknowledgement(payload, status = 201, changes = {}) {
   const {version_prefix, ...metadata} = payload;
   return {status, contentType: 'application/json; charset=utf-8', body: JSON.stringify({
-    ...metadata, version: payload.version || `${version_prefix}7`, id: releaseID,
+    ...metadata, version: payload.version || `${version_prefix}7`, id: buildID,
     created_at: '2026-10-15T00:00:00Z', ...changes,
   })};
 }

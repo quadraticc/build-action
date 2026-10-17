@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-This repository provides a Node.js GitHub Action that creates immutable Quadraticc releases. `src/main.ts` is the entry point; `src/action.ts` handles Actions inputs and outputs, `src/release.ts` validates metadata and release responses, and `src/http.ts` implements HTTPS transport. `action.yml` declares the public interface.
+This repository provides a Node.js GitHub Action that creates immutable Quadraticc builds. `src/main.ts` is the entry point; `src/action.ts` handles Actions inputs and outputs, `src/build.ts` validates metadata and build responses, and `src/http.ts` implements HTTPS transport. `action.yml` declares the public interface.
 
 Tests live in `tests/*.test.mjs`, with shared data in `tests/fixtures.mjs`. TypeScript compiles into ignored `build/`; ncc packages the distributable into committed `dist/`. CI configuration lives in `.github/workflows/check.yml`.
 
@@ -33,4 +33,4 @@ The repository has no commits yet, so no established commit-message convention e
 
 ## Security & Configuration
 
-Never commit credentials or environment files. Preserve token masking, HTTPS certificate verification, redirect refusal, bounded requests and responses, and safe errors that omit credentials and provider response bodies. Release creation must not automatically retry ambiguous failures.
+Never commit credentials or environment files. Preserve token masking, HTTPS certificate verification, redirect refusal, bounded requests and responses, and safe errors that omit credentials and provider response bodies. Build creation must not automatically retry ambiguous failures.

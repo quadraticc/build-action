@@ -1,6 +1,6 @@
 import * as core from '@actions/core';
 import {ActionError, postJSON} from './http.js';
-import {createRelease, type Environment, type Values} from './release.js';
+import {createBuild, type Environment, type Values} from './build.js';
 
 export interface Toolkit {
   getInput(name: string, options: {trimWhitespace: boolean}): string;
@@ -18,16 +18,16 @@ export async function run(toolkit: Toolkit = core, environment: Environment = pr
     if (token) toolkit.setSecret(token);
     const values: Values = {token};
     for (const key of ['url', 'workspace-id', 'project-id', 'version', 'version-prefix',
-      'commit-sha', 'image-reference', 'release-notes', 'link-workflow-run']) {
+      'commit-sha', 'image-reference', 'build-notes', 'link-workflow-run']) {
       values[key] = toolkit.getInput(key, {trimWhitespace: false});
     }
-    const release = await createRelease(values, environment, send);
-    const outputs = {'release-id': release.id, version: release.version,
-      'commit-sha': release.commit, 'image-reference': release.image,
-      'release-notes': release.notes, url: release.url, created: String(release.created)};
+    const build = await createBuild(values, environment, send);
+    const outputs = {'build-id': build.id, version: build.version,
+      'commit-sha': build.commit, 'image-reference': build.image,
+      'build-notes': build.notes, url: build.url, created: String(build.created)};
     for (const [key, value] of Object.entries(outputs)) toolkit.setOutput(key, value);
-    toolkit.info(release.created ? 'Quadraticc release created.' : 'Identical Quadraticc release reused.');
+    toolkit.info(build.created ? 'Quadraticc build created.' : 'Identical Quadraticc build reused.');
   } catch (error) {
-    toolkit.setFailed(error instanceof ActionError ? error.message : 'The release action could not complete. No provider response or credentials were logged; inspect release history before retrying an explicit version.');
+    toolkit.setFailed(error instanceof ActionError ? error.message : 'The build action could not complete. No provider response or credentials were logged; inspect build history before retrying an explicit version.');
   }
 }

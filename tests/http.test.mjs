@@ -9,7 +9,7 @@ import {spawn} from 'node:child_process';
 import {parse} from 'yaml';
 import selfsigned from 'selfsigned';
 import {postJSON} from '../build/http.js';
-import {createRelease} from '../build/release.js';
+import {createBuild} from '../build/build.js';
 import {values, env, acknowledgement} from './fixtures.mjs';
 
 let pems;
@@ -57,7 +57,7 @@ test('real HTTPS sends JSON and the project token once with a bounded, verified 
     response.writeHead(result.status, {'content-type': result.contentType});
     response.end(result.body);
   });
-  const result = await createRelease({...values, url: origin.origin}, env,
+  const result = await createBuild({...values, url: origin.origin}, env,
     (url, token, body) => postJSON(url, token, body, trusted));
   assert.equal(result.version, '0.0.7');
   assert.equal(requests, 1);
@@ -70,7 +70,7 @@ test('redirects never forward the bearer token or cause a second request', async
     response.writeHead(302, {location: `${other.origin}/stolen`});
     response.end('private redirected provider output');
   });
-  await assert.rejects(createRelease({...values, url: origin.origin}, env,
+  await assert.rejects(createBuild({...values, url: origin.origin}, env,
     (url, token, body) => postJSON(url, token, body, trusted)), /HTTP 302.*Redirects are refused/);
   assert.equal(forwarded, 0);
 });
@@ -120,7 +120,7 @@ test('the committed action bundle runs standalone and writes safe, multiline Git
   const origin = await server(t, async (request, response) => {
     requests++;
     const payload = await requestBody(request);
-    assert.equal(payload.release_notes, 'Build finished\n::warning::plain notes');
+    assert.equal(payload.build_notes, 'Build finished\n::warning::plain notes');
     const result = acknowledgement(payload);
     response.writeHead(result.status, {'content-type': result.contentType});
     response.end(result.body);
@@ -129,7 +129,7 @@ test('the committed action bundle runs standalone and writes safe, multiline Git
   delete context.NODE_TLS_REJECT_UNAUTHORIZED;
   for (const key of Object.keys(context)) if (key.startsWith('INPUT_')) delete context[key];
   for (const [key, value] of Object.entries({...values, url: origin.origin,
-    'release-notes': 'Build finished\n::warning::plain notes'})) context[`INPUT_${key.toUpperCase()}`] = value;
+    'build-notes': 'Build finished\n::warning::plain notes'})) context[`INPUT_${key.toUpperCase()}`] = value;
   // The runtime has no source tree, build files or node_modules to fall back to.
   const metadata = parse(await readFile(new URL('../action.yml', import.meta.url), 'utf8'));
   const child = spawn(process.execPath, [metadata.runs.main], {cwd: directory, env: context});
