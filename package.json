@@ -1,12 +1,12 @@
 {
-  "name": "@quadraticc/release-action",
+  "name": "@quadraticc/build-action",
   "version": "2.0.0",
   "private": true,
   "description": "Create immutable builds in Quadraticc from GitHub Actions.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/quadraticc/release-action.git"
+    "url": "https://github.com/quadraticc/build-action.git"
   },
   "engines": {
     "node": ">=24"

@@ -50,7 +50,7 @@ export function postJSON(url: URL, token: string, body: string,
           authorization: `Bearer ${token}`,
           accept: 'application/json', 'content-type': 'application/json',
           'content-length': Buffer.byteLength(body),
-          'user-agent': 'quadraticc/release-action/1',
+          'user-agent': 'quadraticc/build-action/1',
         },
       }, response => {
         incoming = response;
