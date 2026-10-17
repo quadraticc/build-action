@@ -1,6 +1,6 @@
 {
   "name": "@quadraticc/build-action",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Create immutable builds in Quadraticc from GitHub Actions.",
   "license": "MIT",

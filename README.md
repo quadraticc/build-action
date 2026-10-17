@@ -19,7 +19,7 @@ Add this step after your successful build:
 ```yaml
 - name: Register build
   id: build
-  uses: quadraticc/build-action@v2
+  uses: quadraticc/build-action@v1
   with:
     token: ${{ secrets.QUADRATICC_TOKEN }}
     workspace-id: ${{ vars.WORKSPACE_ID }}
