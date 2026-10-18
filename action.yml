@@ -21,17 +21,18 @@ inputs:
     description: Explicit build version. Supply exactly one of version or version-prefix.
   version-prefix:
     description: Series for server-allocated versions, such as 0.0. Supply exactly one of version or version-prefix.
+  version-suffix:
+    description: Optional semantic prerelease/metadata suffix for numbered builds, such as -abc123. Requires version-prefix.
+  branch:
+    description: Branch the artifact was built from.
+    default: ${{ github.head_ref || github.ref_name }}
   commit-sha:
     description: Full commit SHA of the built artifact. Defaults to the workflow commit.
     default: ${{ github.sha }}
-  image-reference:
-    description: Optional image reference; a digest is recommended for deployable images.
   images:
     description: Optional JSON object of named, digest-pinned images, such as web and migrations.
   metadata:
     description: Optional JSON object of non-secret string metadata, such as migration_name.
-  build-notes:
-    description: Optional notes. When empty, a GitHub run and attempt note is generated.
   link-workflow-run:
     description: Associate this GitHub.com run with a repository already connected to this Quadraticc project.
     default: 'false'
@@ -42,14 +43,12 @@ outputs:
     description: Created or reused build version.
   commit-sha:
     description: Commit SHA recorded on the build.
-  image-reference:
-    description: Image reference recorded on the build, or an empty string.
+  branch:
+    description: Branch recorded on the build, or an empty string.
   images:
     description: Named image references recorded on the build, as a JSON object.
   metadata:
     description: Build metadata recorded on the build, as a JSON object.
-  build-notes:
-    description: Notes recorded on the build.
   url:
     description: Link to this build in Quadraticc.
   created:

@@ -120,7 +120,7 @@ test('the committed action bundle runs standalone and writes safe, multiline Git
   const origin = await server(t, async (request, response) => {
     requests++;
     const payload = await requestBody(request);
-    assert.equal(payload.build_notes, 'Build finished\n::warning::plain notes');
+    assert.deepEqual(payload.metadata, {description: 'Build finished\n::warning::plain metadata'});
     const result = acknowledgement(payload);
     response.writeHead(result.status, {'content-type': result.contentType});
     response.end(result.body);
@@ -129,7 +129,7 @@ test('the committed action bundle runs standalone and writes safe, multiline Git
   delete context.NODE_TLS_REJECT_UNAUTHORIZED;
   for (const key of Object.keys(context)) if (key.startsWith('INPUT_')) delete context[key];
   for (const [key, value] of Object.entries({...values, url: origin.origin,
-    'build-notes': 'Build finished\n::warning::plain notes'})) context[`INPUT_${key.toUpperCase()}`] = value;
+    metadata: JSON.stringify({description: 'Build finished\n::warning::plain metadata'})})) context[`INPUT_${key.toUpperCase()}`] = value;
   // The runtime has no source tree, build files or node_modules to fall back to.
   const metadata = parse(await readFile(new URL('../action.yml', import.meta.url), 'utf8'));
   const child = spawn(process.execPath, [metadata.runs.main], {cwd: directory, env: context});
@@ -142,9 +142,9 @@ test('the committed action bundle runs standalone and writes safe, multiline Git
   const recorded = await readFile(output, 'utf8');
   assert.match(recorded, /version<<[^\r\n]+\r?\n0\.0\.7/);
   assert.match(recorded, /created<<[^\r\n]+\r?\ntrue/);
-  assert.match(recorded, /Build finished\n::warning::plain notes/);
+  assert.match(recorded, /Build finished/);
   assert.ok(!recorded.includes(values.token));
   const visible = stdout.split(/\r?\n/).filter(line => !line.startsWith('::add-mask::')).join('\n');
   assert.ok(!visible.includes(values.token));
-  assert.ok(!visible.includes('::warning::plain notes'));
+  assert.ok(!visible.includes('::warning::plain metadata'));
 });

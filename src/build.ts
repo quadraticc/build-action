@@ -9,8 +9,8 @@ export interface Payload {
   version?: string;
   version_prefix?: string;
   commit_sha: string;
-  image_reference?: string;
-  build_notes?: string;
+  branch?: string;
+  version_suffix?: string;
   workflow_run?: WorkflowSource;
 }
 export interface Prepared {
@@ -27,8 +27,7 @@ export interface Result {
   id: string;
   version: string;
   commit: string;
-  image: string;
-  notes: string;
+  branch: string;
   url: string;
   created: boolean;
 }
@@ -36,8 +35,9 @@ export interface Result {
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const controls = /\p{Cc}/u;
 const wellFormed = (value: string) => !/[\uD800-\uDFFF]/u.test(value);
-const validVersion = (value: string) => value.length > 0 && Buffer.byteLength(value) <= 100 &&
-  wellFormed(value) && value.trim() === value && !controls.test(value);
+const validVersion = (value: string) => Buffer.byteLength(value) <= 100 &&
+  /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$/.test(value) &&
+  (value.split('+')[0]!.split('-').slice(1).join('-').split('.').every(part => !/^0[0-9]+$/.test(part)));
 const inputError = (field: string, requirement: string): never => {throw new ActionError(`Input ${field} ${requirement}.`);};
 
 function identifier(value: string, field: string): string {
@@ -96,7 +96,7 @@ export function prepare(values: Values, env: Environment): Prepared {
   if (Boolean(version) === Boolean(prefix)) {
     throw new ActionError('Supply exactly one of version or version-prefix.');
   }
-  if (version && !validVersion(version)) inputError('version', 'must be nonempty, at most 100 UTF-8 bytes, and contain no surrounding whitespace or control characters');
+  if (version && !validVersion(version)) inputError('version', 'must be a semantic version of at most 100 bytes, such as 0.0.1-abc123');
   if (prefix && (!/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.$/.test(prefix) || prefix.length > 98)) {
     inputError('version-prefix', 'must be a canonical major.minor. prefix, such as 0.0.');
   }
@@ -104,26 +104,20 @@ export function prepare(values: Values, env: Environment): Prepared {
   if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(commit)) inputError('commit-sha', 'must be a full 40- or 64-character hexadecimal commit SHA');
   const images = mapInput(values.images, 'images');
   const metadata = mapInput(values.metadata, 'metadata');
-  const image = values['image-reference'] || images?.web || '';
-  if (images?.web && image !== images.web) inputError('image-reference', 'must match the named web image when both are provided');
+  if (values['image-reference'] || values['build-notes']) throw new ActionError('The image-reference and build-notes inputs were removed; use named images.');
   if (Buffer.byteLength(JSON.stringify([images ?? {}, metadata ?? {}])) > 12000) throw new ActionError('Encoded images and metadata must fit within 12000 bytes.');
-  if (!wellFormed(image) || Buffer.byteLength(image) > 2048 || /[\r\n\0]/.test(image)) inputError('image-reference', 'must be at most 2048 UTF-8 bytes and contain no line breaks or NUL');
-  let notes = values['build-notes'] ?? '';
-  if (!notes && env.GITHUB_RUN_ID && env.GITHUB_RUN_ATTEMPT) {
-    if (!/^[1-9][0-9]*$/.test(env.GITHUB_RUN_ID) || !/^[1-9][0-9]*$/.test(env.GITHUB_RUN_ATTEMPT)) {
-      throw new ActionError('GitHub run and attempt context is invalid.');
-    }
-    notes = `GitHub Actions run ${env.GITHUB_RUN_ID}, attempt ${env.GITHUB_RUN_ATTEMPT}.`;
-  }
-  if (!wellFormed(notes) || Buffer.byteLength(notes) > 16384 || notes.includes('\0')) inputError('build-notes', 'must be at most 16384 UTF-8 bytes and contain no NUL');
+  const branch = values.branch || env.GITHUB_HEAD_REF || env.GITHUB_REF_NAME || '';
+  if (!wellFormed(branch) || Buffer.byteLength(branch) > 255 || branch.trim() !== branch || controls.test(branch)) inputError('branch', 'must fit within 255 bytes without surrounding whitespace or control characters');
+  const suffix = values['version-suffix'] || '';
+  if (suffix && (!prefix || !/^[-+]/.test(suffix) || !validVersion(prefix + '1' + suffix))) inputError('version-suffix', 'must form a valid semantic version with version-prefix');
   const link = values['link-workflow-run'] || 'false';
   if (!['true', 'false'].includes(link)) inputError('link-workflow-run', 'must be true or false');
   const payload: Payload = {commit_sha: commit};
   if (version) payload.version = version; else payload.version_prefix = prefix;
-  if (image) payload.image_reference = image;
+  if (branch) payload.branch = branch;
+  if (suffix) payload.version_suffix = suffix;
   if (images) payload.images = images;
   if (metadata) payload.metadata = metadata;
-  if (notes) payload.build_notes = notes;
   if (link === 'true') {
     if (env.GITHUB_SERVER_URL !== 'https://github.com') throw new ActionError('Workflow linking currently supports GitHub.com runs only.');
     payload.workflow_run = {repository_id: positiveID(env.GITHUB_REPOSITORY_ID), run_id: positiveID(env.GITHUB_RUN_ID)};
@@ -160,16 +154,21 @@ function acknowledged(prepared: Prepared, reply: Reply): Result {
   } catch { throw mismatch(); }
   if (typeof data.id !== 'string' || !uuid.test(data.id) || typeof data.version !== 'string' ||
       !validVersion(data.version) || data.commit_sha !== payload.commit_sha ||
-      (data.image_reference ?? '') !== (payload.image_reference ?? '') ||
-      (data.build_notes ?? '') !== (payload.build_notes ?? '') ||
+      (data.branch ?? '') !== (payload.branch ?? '') || 'image_reference' in data || 'build_notes' in data ||
       !sameMap(data.images, payload.images) || !sameMap(data.metadata, payload.metadata) ||
       typeof data.created_at !== 'string' || !Number.isFinite(Date.parse(data.created_at))) throw mismatch();
-  if (payload.version ? data.version !== payload.version :
-    !data.version.startsWith(payload.version_prefix!) || !/^(0|[1-9][0-9]*)$/.test(data.version.slice(payload.version_prefix!.length))) throw mismatch();
+  if (payload.version) {
+    if (data.version !== payload.version) throw mismatch();
+  } else {
+    const suffix = payload.version_suffix ?? '';
+    if (!data.version.startsWith(payload.version_prefix!) || suffix && !data.version.endsWith(suffix)) throw mismatch();
+    const patch = data.version.slice(payload.version_prefix!.length, suffix ? -suffix.length : undefined);
+    if (!/^(0|[1-9][0-9]*)$/.test(patch)) throw mismatch();
+  }
   const source = data.workflow_run as Record<string, unknown> | null | undefined;
   if (payload.workflow_run ? !source || source.repository_id !== payload.workflow_run.repository_id || source.run_id !== payload.workflow_run.run_id : source != null) throw mismatch();
   return {id: data.id, version: data.version, commit: payload.commit_sha, images: payload.images ?? {}, metadata: payload.metadata ?? {},
-    image: payload.image_reference ?? '', notes: payload.build_notes ?? '', created: reply.status === 201,
+    branch: payload.branch ?? '', created: reply.status === 201,
     url: `${prepared.origin}/app/workspaces/${prepared.workspace}/projects/${prepared.project}/builds?build=${data.id}`};
 }
 

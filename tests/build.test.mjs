@@ -12,7 +12,7 @@ test('numbering is allocated by one POST to the project API, with the exact arti
     assert.equal(token, values.token);
     const payload = JSON.parse(body);
     assert.deepEqual(payload, {version_prefix: '0.0.', commit_sha: env.GITHUB_SHA,
-      image_reference: values['image-reference'], build_notes: 'GitHub Actions run 123, attempt 1.'});
+      branch: 'main', images: JSON.parse(values.images)});
     return acknowledgement(payload);
   });
   assert.equal(calls, 1);
@@ -22,19 +22,18 @@ test('numbering is allocated by one POST to the project API, with the exact arti
   assert.equal(result.url, `https://quadrati.cc/app/workspaces/${values['workspace-id']}/projects/${values['project-id']}/builds?build=${buildID}`);
 });
 
-test('explicit versions preserve custom notes and commits, including a 64-character SHA', async () => {
-  const notes = 'Built "server"\n$(arbitrary shell text)\n::warning::still plain build notes';
-  const input = {...values, version: 'v1.2.3', 'version-prefix': '', 'commit-sha': 'B'.repeat(64), 'build-notes': notes};
+test('explicit semantic versions preserve branch and full commits', async () => {
+  const input = {...values, version: '1.2.3-rc.1+build.42', 'version-prefix': '', 'commit-sha': 'B'.repeat(64), branch: 'feature/builds'};
   const result = await createBuild(input, env, async (url, _token, body) => {
     assert.ok(url.pathname.endsWith('/builds'));
     const payload = JSON.parse(body);
-    assert.equal(payload.version, 'v1.2.3');
+    assert.equal(payload.version, input.version);
     assert.equal(payload.version_prefix, undefined);
     assert.equal(payload.commit_sha, 'B'.repeat(64));
-    assert.equal(payload.build_notes, notes);
+    assert.equal(payload.branch, 'feature/builds');
     return acknowledgement(payload);
   });
-  assert.equal(result.notes, notes);
+  assert.equal(result.branch, 'feature/builds');
   assert.equal(result.commit, 'B'.repeat(64));
 });
 
@@ -48,10 +47,19 @@ test('numbered exact replay exposes created=false and does not perform any retri
   assert.equal(calls, 1);
 });
 
-test('different GitHub run attempts change default notes, while custom notes remain stable', () => {
-  assert.notEqual(prepare(values, env).payload.build_notes, prepare(values, {...env, GITHUB_RUN_ATTEMPT: '2'}).payload.build_notes);
-  const custom = {...values, 'build-notes': 'Stable build identity'};
-  assert.equal(prepare(custom, env).payload.build_notes, prepare(custom, {...env, GITHUB_RUN_ATTEMPT: '2'}).payload.build_notes);
+test('semantic suffixes and explicit metadata survive numbered registration', async () => {
+  const input = {...values, 'version-suffix': '-' + env.GITHUB_SHA, metadata: '{"ci_run":"123","ci_attempt":"2"}'};
+  const result = await createBuild(input, env, async (_url, _token, body) => {
+    const payload = JSON.parse(body);
+    assert.equal(payload.version_suffix, '-' + env.GITHUB_SHA);
+    assert.deepEqual(payload.metadata, {ci_run: '123', ci_attempt: '2'});
+    return acknowledgement(payload);
+  });
+  assert.equal(result.version, '0.0.7-' + env.GITHUB_SHA);
+  for (const version of ['v1.2.3', '1.2', '01.2.3', '1.2.3-01', '1.2.3-', '1.2.3+'])
+    assert.throws(() => prepare({...values, version, 'version-prefix': ''}, env), ActionError);
+  for (const suffix of ['abc', '-01', '+', '-'])
+    assert.throws(() => prepare({...values, 'version-suffix': suffix}, env), ActionError);
 });
 
 test('plain registration needs no GitHub App, GitHub token or repository/run identity', async () => {
@@ -104,14 +112,13 @@ test('unsafe or invalid inputs fail without making a network request or reflecti
   });
 });
 
-test('UUID input case is normalized, UTF-8 byte limits are respected, and optional metadata can be absent', () => {
-  const input = {...values, version: '😀'.repeat(25), 'version-prefix': '',
-    'workspace-id': 'ABCDEFAB-ABCD-ABCD-ABCD-ABCDEFABCDEF', 'image-reference': '', 'build-notes': ''};
+test('UUID case is normalized and optional branch and metadata can be absent', () => {
+  const input = {...values, version: '1.2.3', 'version-prefix': '',
+    'workspace-id': 'ABCDEFAB-ABCD-ABCD-ABCD-ABCDEFABCDEF', images: ''};
   const prepared = prepare(input, {'GITHUB_SHA': env.GITHUB_SHA});
   assert.ok(prepared.endpoint.pathname.includes('abcdefab-abcd-abcd-abcd-abcdefabcdef'));
-  assert.equal(prepared.payload.version, input.version);
-  assert.equal(prepared.payload.image_reference, undefined);
-  assert.equal(prepared.payload.build_notes, undefined);
+  assert.equal(prepared.payload.branch, undefined);
+  assert.equal(prepared.payload.images, undefined);
 });
 
 test('HTTP failures remain failures, including explicit conflicts and redirects; provider text stays private', async t => {
@@ -135,7 +142,7 @@ test('HTTP failures remain failures, including explicit conflicts and redirects;
 test('a successful status must acknowledge exactly the submitted metadata and expected version series', async t => {
   const changes = [
     {id: 'invalid'}, {version: '9.9.9'}, {version: '0.0.01'}, {version: '0.0.1\nprivate'},
-    {commit_sha: 'b'.repeat(40)}, {image_reference: 'other-image'}, {build_notes: 'private notes'},
+    {commit_sha: 'b'.repeat(40)}, {branch: 'other'}, {image_reference: 'other-image'}, {build_notes: 'private notes'},
     {created_at: 'invalid'}, {workflow_run: {repository_id: 42, run_id: 123}},
   ];
   for (let i = 0; i < changes.length; i++) await t.test(`mismatch ${i + 1}`, async () => {

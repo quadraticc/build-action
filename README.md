@@ -53,24 +53,23 @@ set the surrounding workflow's permissions according to its build requirements.
 | `token` | Yes | Project-scoped `qcc_...` CI credential, passed from GitHub Secrets. This is not a GitHub token. |
 | `workspace-id` | Yes | Workspace UUID. |
 | `project-id` | Yes | Project UUID. |
-| `version` | One version input | Explicit nonempty version, at most 100 UTF-8 bytes. |
+| `version` | One version input | Semantic version of at most 100 ASCII bytes, such as `0.0.1-abc123`. |
 | `version-prefix` | One version input | Canonical `major.minor.` series, such as `0.0.` or `1.2.`. |
 | `commit-sha` | No | Full 40- or 64-character artifact commit SHA. Defaults to `${{ github.sha }}`. Override when the build uses a different commit. |
-| `image-reference` | No | Image reference, at most 2048 UTF-8 bytes. Use the pushed digest for deployable images. |
+| `branch` | No | Branch/tag name; defaults to the PR head or runner ref name. |
+| `version-suffix` | No | Optional SemVer suffix for `version-prefix`, such as `-${{ github.sha }}`. |
 | `images` | No | JSON object containing up to 16 named SHA-256 digest references, such as `web` and `migrations`. |
 | `metadata` | No | JSON object containing up to 64 non-secret string values, such as `migration_name`. |
-| `build-notes` | No | Notes, at most 16384 UTF-8 bytes. Empty input generates `GitHub Actions run <id>, attempt <attempt>.` when that context is available. |
 | `link-workflow-run` | No | `true` to associate the current GitHub.com repository/run with the build. Defaults to `false`. |
 
-The encoded JSON request is limited to 32 KiB. Versions reject surrounding
-whitespace/control characters; notes support multiline text. Inputs go through
+The encoded JSON request is limited to 32 KiB. Versions follow SemVer 2.0.0 (no `v` prefix or leading zeros in numeric identifiers). Inputs go through
 JSON serialization rather than shell interpolation.
 
 To record a pushed container image, add your build's digest, for example:
 
 ```yaml
-image-reference: ghcr.io/acme/web@${{ steps.build.outputs.digest }}
-build-notes: Build the web server and worker.
+images: |
+  {"web": "ghcr.io/acme/web@${{ steps.build.outputs.digest }}"}
 ```
 
 This example assumes your image build/push step is named `build` and exposes a
@@ -78,7 +77,7 @@ This example assumes your image build/push step is named `build` and exposes a
 Quadraticc records the reference; it does not verify or host the image.
 
 To register multiple images and migration metadata (requires server migration
-`0018_build_artifacts.sql`), add:
+`0026_build_details_and_cancellation.sql`), add:
 
 ```yaml
 images: |
@@ -90,8 +89,7 @@ metadata: |
   {"migration_name": ${{ toJSON(steps.migration_info.outputs.name) }}}
 ```
 
-The named `web` image supplies `image-reference` when that input is omitted.
-If both are supplied they must match. Images and metadata are immutable and
+HTTP deployments use the named `web` image. Images and metadata are immutable and
 participate in numbered-build replay identity. Their combined encoded size is
 limited to 12000 bytes; metadata values may be at most 4096 UTF-8 bytes each.
 Metadata is readable by build viewers. Store credentials in environment secrets.
@@ -105,8 +103,7 @@ Each image must be a complete registry/repository reference pinned with
 | `build-id` | Build UUID. |
 | `version` | Explicit or server-assigned version. |
 | `commit-sha` | Recorded commit SHA. |
-| `image-reference` | Recorded image reference, or an empty string. |
-| `build-notes` | Recorded notes. |
+| `branch` | Recorded branch/tag name, or empty. |
 | `images` | Named image references as JSON; `{}` when absent. |
 | `metadata` | Build metadata as JSON; `{}` when absent. |
 | `url` | Link to the build in Quadraticc's project build history. |
@@ -137,14 +134,17 @@ version returns `409` and fails the action. A conflict is never silently accepte
 
 Automatic versions use `POST .../builds/next`. The server allocates one greater
 than the highest canonical version in the chosen series, starting at patch 1.
-Exact metadata replay in that project/series returns the existing build with
-`200` and `created=false`. Commit, image, named images, metadata, notes and optional source IDs all
-participate in replay identity.
+Exact replay of commit, branch, suffix, named images, metadata and optional workflow source in that project/series returns the existing CI build with `200` and `created=false`. The patch counter includes prereleases and build metadata in that series.
 
-Default notes include the run and attempt, so rerunning a GitHub job usually
-requests a new build. If you need to replay an earlier numbered request after
-a lost acknowledgement, supply its exact original notes and other metadata.
-Stable custom notes can intentionally cause reuse across runs of the same build.
+To allocate a new build for every CI attempt, include its identity explicitly:
+
+```yaml
+version-suffix: '-${{ github.sha }}'
+metadata: |
+  {"ci_run": "${{ github.run_id }}", "ci_attempt": "${{ github.run_attempt }}"}
+```
+
+Repeating the exact payload can recover a lost acknowledgement. The action no longer generates build notes. `image-reference` and `build-notes` inputs/outputs have been removed; use `images`.
 
 The action makes one request, verifies TLS, refuses redirects and bounds request
 time and response size. It never automatically repeats an ambiguous creation.
@@ -203,6 +203,4 @@ MIT. Bundled dependency notices are in `dist/licenses.txt`.
 
 ## Server compatibility
 
-This v1 action targets the epoch-7 Builds API (`/builds`, `build_notes`).
-Upgrade the Quadraticc server before using it.
-Inputs/outputs use `build-notes` and `build-id`.
+This v1 action targets the epoch-13 Builds API (`/builds`, named `images`, `branch`, optional `version_suffix`). Upgrade the server before using this revision. Historical server builds retain their versions; old image references migrate into `images.web`.

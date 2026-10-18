@@ -17,14 +17,13 @@ export async function run(toolkit: Toolkit = core, environment: Environment = pr
     const token = toolkit.getInput('token', {trimWhitespace: false});
     if (token) toolkit.setSecret(token);
     const values: Values = {token};
-    for (const key of ['url', 'workspace-id', 'project-id', 'version', 'version-prefix',
-      'commit-sha', 'image-reference', 'images', 'metadata', 'build-notes', 'link-workflow-run']) {
+    for (const key of ['url', 'workspace-id', 'project-id', 'version', 'version-prefix', 'version-suffix', 'branch',
+      'commit-sha', 'images', 'metadata', 'link-workflow-run']) {
       values[key] = toolkit.getInput(key, {trimWhitespace: false});
     }
     const build = await createBuild(values, environment, send);
     const outputs = {'build-id': build.id, version: build.version,
-      'commit-sha': build.commit, 'image-reference': build.image,
-      'build-notes': build.notes, images: JSON.stringify(build.images), metadata: JSON.stringify(build.metadata), url: build.url, created: String(build.created)};
+      'commit-sha': build.commit, branch: build.branch, images: JSON.stringify(build.images), metadata: JSON.stringify(build.metadata), url: build.url, created: String(build.created)};
     for (const [key, value] of Object.entries(outputs)) toolkit.setOutput(key, value);
     toolkit.info(build.created ? 'Quadraticc build created.' : 'Identical Quadraticc build reused.');
   } catch (error) {

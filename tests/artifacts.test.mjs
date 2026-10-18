@@ -8,17 +8,17 @@ const images = {web: `123456789012.dkr.ecr.us-east-1.amazonaws.com/web@sha256:${
 const metadata = {migration_name: '20261018_Initial'};
 const inputs = {...values, 'image-reference': '', images: JSON.stringify(images), metadata: JSON.stringify(metadata)};
 
-test('named images and metadata are acknowledged and exposed without losing the legacy web image', async () => {
+test('named images and metadata are acknowledged and exposed without redundant legacy fields', async () => {
   const result = await createBuild(inputs, env, async (_url, _token, body) => {
     const payload = JSON.parse(body);
     assert.deepEqual(payload.images, images);
     assert.deepEqual(payload.metadata, metadata);
-    assert.equal(payload.image_reference, images.web);
+    assert.equal(payload.image_reference, undefined);
     return acknowledgement(payload);
   });
   assert.deepEqual(result.images, images);
   assert.deepEqual(result.metadata, metadata);
-  assert.equal(result.image, images.web);
+  assert.equal(result.branch, 'main');
   const outputs = {};
   await run({getInput(name) {return inputs[name] || '';}, setSecret() {}, setOutput(name, value) {outputs[name] = value;}, info() {}, setFailed(message) {assert.fail(message);}}, env, async (_url, _token, body) => acknowledgement(JSON.parse(body)));
   assert.deepEqual(JSON.parse(outputs.images), images);
@@ -48,5 +48,5 @@ test('artifact acknowledgement compares map contents independent of key order an
   for (const change of [{images: {}}, {images: null}, {images: []}, {metadata: {}}, {metadata: {migration_name: 'other'}}, {images: {...images, extra: images.web}}]) {
     await assert.rejects(createBuild(inputs, env, async (_url, _token, body) => acknowledgement(JSON.parse(body), 201, change)), /mismatched build acknowledgement/);
   }
-  assert.deepEqual(prepare(values, env).payload.images, undefined);
+  assert.deepEqual(prepare(values, env).payload.images, JSON.parse(values.images));
 });
