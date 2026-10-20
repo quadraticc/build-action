@@ -169,7 +169,7 @@ function acknowledged(prepared: Prepared, reply: Reply): Result {
   if (payload.workflow_run ? !source || source.repository_id !== payload.workflow_run.repository_id || source.run_id !== payload.workflow_run.run_id : source != null) throw mismatch();
   return {id: data.id, version: data.version, commit: payload.commit_sha, images: payload.images ?? {}, metadata: payload.metadata ?? {},
     branch: payload.branch ?? '', created: reply.status === 201,
-    url: `${prepared.origin}/app/workspaces/${prepared.workspace}/projects/${prepared.project}/builds?build=${data.id}`};
+    url: `${prepared.origin}/workspaces/${prepared.workspace}/projects/${prepared.project}/builds?build=${data.id}`};
 }
 
 export async function createBuild(values: Values, env: Environment,

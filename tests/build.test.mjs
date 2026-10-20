@@ -19,7 +19,7 @@ test('numbering is allocated by one POST to the project API, with the exact arti
   assert.equal(result.id, buildID);
   assert.equal(result.version, '0.0.7');
   assert.equal(result.created, true);
-  assert.equal(result.url, `https://app.quadrati.cc/app/workspaces/${values['workspace-id']}/projects/${values['project-id']}/builds?build=${buildID}`);
+  assert.equal(result.url, `https://app.quadrati.cc/workspaces/${values['workspace-id']}/projects/${values['project-id']}/builds?build=${buildID}`);
 });
 
 test('explicit semantic versions preserve branch and full commits', async () => {
