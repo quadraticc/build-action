@@ -18,7 +18,7 @@ test('published action metadata matches runtime inputs, outputs and packaged ent
   assert.deepEqual([...read].sort(), Object.keys(metadata.inputs).sort());
   assert.deepEqual([...written].sort(), Object.keys(metadata.outputs).sort());
   for (const name of ['token', 'workspace-id', 'project-id']) assert.equal(metadata.inputs[name].required, true);
-  assert.equal(metadata.inputs.url.default, 'https://quadrati.cc');
+  assert.equal(metadata.inputs.url.default, 'https://app.quadrati.cc');
   assert.notEqual(metadata.inputs.url.required, true);
   for (const path of ['../.github/workflows/check.yml', '../.github/dependabot.yml']) {
     const document = parse(readFileSync(new URL(path, import.meta.url), 'utf8'));

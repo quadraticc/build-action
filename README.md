@@ -1,6 +1,6 @@
 # Quadraticc build action
 
-Create an immutable build in [Quadraticc](https://quadrati.cc) after a successful
+Create an immutable build in [Quadraticc](https://app.quadrati.cc) after a successful
 build. Supply an explicit version or let the server allocate the next patch in a
 series such as `0.0.`. The action returns build information as step outputs.
 
@@ -49,7 +49,7 @@ set the surrounding workflow's permissions according to its build requirements.
 
 | Name | Required | Meaning |
 | --- | --- | --- |
-| `url` | No | Quadraticc HTTPS origin. Defaults to `https://quadrati.cc`. A custom host and port are supported. No path, credentials, query or fragment. |
+| `url` | No | Quadraticc HTTPS origin. Defaults to `https://app.quadrati.cc`. A custom host and port are supported. No path, credentials, query or fragment. |
 | `token` | Yes | Project-scoped `qcc_...` CI credential, passed from GitHub Secrets. This is not a GitHub token. |
 | `workspace-id` | Yes | Workspace UUID. |
 | `project-id` | Yes | Project UUID. |

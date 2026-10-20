@@ -6,9 +6,9 @@ import {values, env, buildID, acknowledgement} from './fixtures.mjs';
 
 test('numbering is allocated by one POST to the project API, with the exact artifact commit and image', async () => {
   let calls = 0;
-  const result = await createBuild({...values, url: 'https://quadrati.cc/'}, env, async (url, token, body) => {
+  const result = await createBuild({...values, url: 'https://app.quadrati.cc/'}, env, async (url, token, body) => {
     calls++;
-    assert.equal(url.href, `https://quadrati.cc/api/v1/workspaces/${values['workspace-id']}/projects/${values['project-id']}/builds/next`);
+    assert.equal(url.href, `https://app.quadrati.cc/api/v1/workspaces/${values['workspace-id']}/projects/${values['project-id']}/builds/next`);
     assert.equal(token, values.token);
     const payload = JSON.parse(body);
     assert.deepEqual(payload, {version_prefix: '0.0.', commit_sha: env.GITHUB_SHA,
@@ -19,7 +19,7 @@ test('numbering is allocated by one POST to the project API, with the exact arti
   assert.equal(result.id, buildID);
   assert.equal(result.version, '0.0.7');
   assert.equal(result.created, true);
-  assert.equal(result.url, `https://quadrati.cc/app/workspaces/${values['workspace-id']}/projects/${values['project-id']}/builds?build=${buildID}`);
+  assert.equal(result.url, `https://app.quadrati.cc/app/workspaces/${values['workspace-id']}/projects/${values['project-id']}/builds?build=${buildID}`);
 });
 
 test('explicit semantic versions preserve branch and full commits', async () => {
@@ -86,11 +86,11 @@ test('workflow association is explicitly opt-in and uses this GitHub.com reposit
 
 test('unsafe or invalid inputs fail without making a network request or reflecting their contents', async t => {
   const cases = [
-    {url: ''}, {url: 'http://quadrati.cc'}, {url: 'https://user:private@quadrati.cc'},
-    {url: 'https://quadrati.cc/project'}, {url: 'https://quadrati.cc?secret=private'},
-    {url: 'https://quadrati.cc#private'}, {url: 'https://quadrati.cc?'}, {url: 'https://quadrati.cc#'},
-    {url: 'https://quadrati.cc\\@other.example'}, {url: 'https://quadrati.cc\n'},
-    {url: ' https://quadrati.cc'}, {'workspace-id': '../private'}, {'project-id': 'not-a-uuid'},
+    {url: ''}, {url: 'http://app.quadrati.cc'}, {url: 'https://user:private@app.quadrati.cc'},
+    {url: 'https://app.quadrati.cc/project'}, {url: 'https://app.quadrati.cc?secret=private'},
+    {url: 'https://app.quadrati.cc#private'}, {url: 'https://app.quadrati.cc?'}, {url: 'https://app.quadrati.cc#'},
+    {url: 'https://app.quadrati.cc\\@other.example'}, {url: 'https://app.quadrati.cc\n'},
+    {url: ' https://app.quadrati.cc'}, {'workspace-id': '../private'}, {'project-id': 'not-a-uuid'},
     {token: ''}, {token: values.token + '\n'}, {token: 'Bearer private-token'},
     {'version-prefix': ''}, {version: '1.2.3'}, {'version-prefix': '0.01.'}, {'version-prefix': '1.2'},
     {'version-prefix': '1'.repeat(100) + '.2.'}, {'commit-sha': 'abc'}, {'commit-sha': 'g'.repeat(40)},

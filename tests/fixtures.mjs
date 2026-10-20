@@ -1,5 +1,5 @@
 export const values = {
-  url: 'https://quadrati.cc', token: `qcc_${'x'.repeat(43)}`,
+  url: 'https://app.quadrati.cc', token: `qcc_${'x'.repeat(43)}`,
   'workspace-id': '11111111-1111-1111-1111-111111111111',
   'project-id': '22222222-2222-2222-2222-222222222222',
   'version-prefix': '0.0.', images: JSON.stringify({web: `ghcr.io/example/app@sha256:${'b'.repeat(64)}`}),
