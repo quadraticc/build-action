@@ -18,11 +18,16 @@ inputs:
     description: Quadraticc project UUID.
     required: true
   version:
-    description: Explicit build version. Supply exactly one of version or version-prefix.
+    description: Explicit build version. Supply exactly one of version or version-prefix when registering; omit when promoting build-id.
   version-prefix:
-    description: Series for server-allocated versions, such as 0.0. Supply exactly one of version or version-prefix.
+    description: Series for server-allocated versions, such as 0.0. Supply exactly one of version or version-prefix when registering; omit when promoting build-id.
   version-suffix:
     description: Optional semantic prerelease/metadata suffix for numbered builds, such as -abc123. Requires version-prefix.
+  is-release:
+    description: Mark the build as a release. One-way promotion; requires server migration 0032_build_releases.sql.
+    default: 'false'
+  build-id:
+    description: Existing build UUID to mark as a release instead of registering a build. Requires is-release true; omit version inputs, images, metadata and workflow linking.
   branch:
     description: Branch the artifact was built from.
     default: ${{ github.head_ref || github.ref_name }}
@@ -37,6 +42,8 @@ inputs:
     description: Associate this GitHub.com run with a repository already connected to this Quadraticc project.
     default: 'false'
 outputs:
+  is-release:
+    description: Whether the acknowledged build is a release.
   build-id:
     description: Quadraticc build UUID.
   version:
@@ -52,7 +59,7 @@ outputs:
   url:
     description: Link to this build in Quadraticc.
   created:
-    description: 'true for a new build; false when numbered creation reuses an identical build.'
+    description: 'true for a new build; false when reusing or promoting an existing build.'
 runs:
   using: node24
   main: dist/index.js

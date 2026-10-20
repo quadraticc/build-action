@@ -4,6 +4,7 @@ export type Values = Record<string, string | undefined>;
 export type Environment = Record<string, string | undefined>;
 export interface WorkflowSource { repository_id: number; run_id: number }
 export interface Payload {
+  is_release?: boolean;
   images?: Record<string, string>;
   metadata?: Record<string, string>;
   version?: string;
@@ -14,6 +15,7 @@ export interface Payload {
   workflow_run?: WorkflowSource;
 }
 export interface Prepared {
+  existingBuildID?: string;
   origin: string;
   workspace: string;
   project: string;
@@ -22,6 +24,7 @@ export interface Prepared {
   endpoint: URL;
 }
 export interface Result {
+  isRelease: boolean;
   images: Record<string, string>;
   metadata: Record<string, string>;
   id: string;
@@ -112,7 +115,10 @@ export function prepare(values: Values, env: Environment): Prepared {
   if (suffix && (!prefix || !/^[-+]/.test(suffix) || !validVersion(prefix + '1' + suffix))) inputError('version-suffix', 'must form a valid semantic version with version-prefix');
   const link = values['link-workflow-run'] || 'false';
   if (!['true', 'false'].includes(link)) inputError('link-workflow-run', 'must be true or false');
+  const release = values['is-release'] || 'false';
+  if (!['true', 'false'].includes(release)) inputError('is-release', 'must be true or false');
   const payload: Payload = {commit_sha: commit};
+  if (release === 'true') payload.is_release = true;
   if (version) payload.version = version; else payload.version_prefix = prefix;
   if (branch) payload.branch = branch;
   if (suffix) payload.version_suffix = suffix;
@@ -140,7 +146,7 @@ const mismatch = () => new ActionError('Quadraticc returned an invalid or mismat
 
 function acknowledged(prepared: Prepared, reply: Reply): Result {
   const {payload} = prepared;
-  const accepted = reply.status === 201 || Boolean(payload.version_prefix) && reply.status === 200;
+  const accepted = reply.status === 201 || Boolean(payload.version_prefix || prepared.existingBuildID) && reply.status === 200;
   if (!accepted) {
     const message = reply.status >= 300 && reply.status < 400 ? 'Redirects are refused; use the final HTTPS origin.' :
       guidance[reply.status] ?? 'The build may already exist. Inspect build history before retrying an explicit version.';
@@ -152,6 +158,7 @@ function acknowledged(prepared: Prepared, reply: Reply): Result {
     data = JSON.parse(reply.body);
     if (!data || typeof data !== 'object' || Array.isArray(data)) throw mismatch();
   } catch { throw mismatch(); }
+  if (payload.is_release && data.is_release !== true || data.is_release != null && typeof data.is_release !== 'boolean' || prepared.existingBuildID && data.id !== prepared.existingBuildID) throw mismatch();
   if (typeof data.id !== 'string' || !uuid.test(data.id) || typeof data.version !== 'string' ||
       !validVersion(data.version) || data.commit_sha !== payload.commit_sha ||
       (data.branch ?? '') !== (payload.branch ?? '') || 'image_reference' in data || 'build_notes' in data ||
@@ -167,14 +174,34 @@ function acknowledged(prepared: Prepared, reply: Reply): Result {
   }
   const source = data.workflow_run as Record<string, unknown> | null | undefined;
   if (payload.workflow_run ? !source || source.repository_id !== payload.workflow_run.repository_id || source.run_id !== payload.workflow_run.run_id : source != null) throw mismatch();
-  return {id: data.id, version: data.version, commit: payload.commit_sha, images: payload.images ?? {}, metadata: payload.metadata ?? {},
+  return {isRelease: data.is_release === true, id: data.id, version: data.version, commit: payload.commit_sha, images: payload.images ?? {}, metadata: payload.metadata ?? {},
     branch: payload.branch ?? '', created: reply.status === 201,
     url: `${prepared.origin}/workspaces/${prepared.workspace}/projects/${prepared.project}/builds?build=${data.id}`};
 }
 
 export async function createBuild(values: Values, env: Environment,
   send: typeof postJSON = postJSON): Promise<Result> {
+  if (values['build-id']) return markExistingBuild(values, send);
   const prepared = prepare(values, env);
   const reply = await send(prepared.endpoint, prepared.token, JSON.stringify(prepared.payload));
   return acknowledged(prepared, reply);
+}
+
+async function markExistingBuild(values: Values, send: typeof postJSON): Promise<Result> {
+  const id = values['build-id']!.toLowerCase();
+  if (!uuid.test(id)) inputError('build-id', 'must be a build UUID');
+  if (values['is-release'] !== 'true' || values.version || values['version-prefix'] || values['version-suffix'] || values.images || values.metadata || values['link-workflow-run'] === 'true') {
+    throw new ActionError('build-id requires is-release: true and cannot be combined with version inputs, images, metadata or workflow linking.');
+  }
+  // Validate location and credential before the sole network request. Context
+  // defaults describe the current workflow, not the existing build's artifact.
+  const base = prepare({...values, version: '0.0.0', 'commit-sha': '0'.repeat(40), branch: ''}, {});
+  const endpoint = new URL(`/api/v1/workspaces/${base.workspace}/projects/${base.project}/builds/${id}/release`, base.origin);
+  const reply = await send(endpoint, base.token, '{}');
+  if (reply.status !== 200) throw new ActionError(`Quadraticc returned HTTP ${reply.status}. Release status could not be confirmed; inspect build history before retrying.`);
+  let data: Record<string, unknown>;
+  try {data = JSON.parse(reply.body);} catch {throw mismatch();}
+  if (!data || typeof data !== 'object' || Array.isArray(data) || data.id !== id || data.is_release !== true || typeof data.version !== 'string' || typeof data.commit_sha !== 'string' || data.branch != null && typeof data.branch !== 'string') throw mismatch();
+  const checked = prepare({...values, version: data.version, 'commit-sha': data.commit_sha, branch: (data.branch as string) ?? '', images: JSON.stringify(data.images ?? {}), metadata: JSON.stringify(data.metadata ?? {})}, {});
+  return acknowledged({...checked, existingBuildID: id}, reply);
 }
