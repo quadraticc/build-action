@@ -3,6 +3,7 @@
 Create an immutable build in [Quadraticc](https://app.quadrati.cc) after a successful
 build. Supply an explicit version or let the server allocate the next patch in a
 series such as `0.0.`. The action returns build information as step outputs.
+Build links open the service’s `/workspaces/...` pages directly.
 
 Version 1 creates builds. Retrieval and deployment are separate operations and
 are outside this version's scope. This action does not upload or build artifacts.
