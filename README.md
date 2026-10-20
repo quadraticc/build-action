@@ -5,8 +5,8 @@ build. Supply an explicit version or let the server allocate the next patch in a
 series such as `0.0.`. The action returns build information as step outputs.
 Build links open the service’s `/workspaces/...` pages directly.
 
-Version 1 creates builds. Retrieval and deployment are separate operations and
-are outside this version's scope. This action does not upload or build artifacts.
+The action creates builds and can mark an existing build as a release.
+Deployment is a separate operation. This action does not upload or build artifacts.
 
 ## Quick start
 
@@ -61,6 +61,8 @@ set the surrounding workflow's permissions according to its build requirements.
 | `version-suffix` | No | Optional SemVer suffix for `version-prefix`, such as `-${{ github.sha }}`. |
 | `images` | No | JSON object containing up to 16 named SHA-256 digest references, such as `web` and `migrations`. |
 | `metadata` | No | JSON object containing up to 64 non-secret string values, such as `migration_name`. |
+| `is-release` | No | `true` to mark the new or existing build as a release. Defaults to `false`. Release status is one-way. Requires server migration `0032_build_releases.sql`. |
+| `build-id` | No | Existing build UUID to promote instead of registering a build. Requires `is-release: 'true'`; omit version inputs, images, metadata and workflow linking. Context commit/branch defaults are ignored. |
 | `link-workflow-run` | No | `true` to associate the current GitHub.com repository/run with the build. Defaults to `false`. |
 
 The encoded JSON request is limited to 32 KiB. Versions follow SemVer 2.0.0 (no `v` prefix or leading zeros in numeric identifiers). Inputs go through
@@ -101,6 +103,7 @@ Each image must be a complete registry/repository reference pinned with
 
 | Name | Value |
 | --- | --- |
+| `is-release` | `true` if the acknowledged build is a release, otherwise `false`. |
 | `build-id` | Build UUID. |
 | `version` | Explicit or server-assigned version. |
 | `commit-sha` | Recorded commit SHA. |
@@ -205,3 +208,27 @@ MIT. Bundled dependency notices are in `dist/licenses.txt`.
 ## Server compatibility
 
 This v1 action targets the epoch-13 Builds API (`/builds`, named `images`, `branch`, optional `version_suffix`). Upgrade the server before using this revision. Historical server builds retain their versions; old image references migrate into `images.web`.
+
+## Releases
+
+Set `is-release: 'true'` when registering a release build. To promote an existing
+build later, use its ID without version inputs:
+
+```yaml
+- name: Mark approved build as a release
+  uses: quadraticc/build-action@v1
+  with:
+    token: ${{ secrets.QUADRATICC_TOKEN }}
+    workspace-id: ${{ vars.WORKSPACE_ID }}
+    project-id: ${{ vars.PROJECT_ID }}
+    build-id: ${{ needs.build.outputs.build-id }}
+    is-release: 'true'
+```
+
+Promotion is idempotent, returns the original artifact's outputs with
+`created: 'false'`, and never changes its version, images or metadata. A numbered
+registration replay also retains the build ID when release status changes:
+`is-release: 'true'` promotes a matching build; `false` never removes release status.
+Project CI credentials can promote builds only in their own project. Environments
+configured for releases only reject ordinary builds. Upgrade the server before
+publishing or using this action's release inputs.

@@ -31740,7 +31740,12 @@ function prepare(values, env) {
     const link = values['link-workflow-run'] || 'false';
     if (!['true', 'false'].includes(link))
         inputError('link-workflow-run', 'must be true or false');
+    const release = values['is-release'] || 'false';
+    if (!['true', 'false'].includes(release))
+        inputError('is-release', 'must be true or false');
     const payload = { commit_sha: commit };
+    if (release === 'true')
+        payload.is_release = true;
     if (version)
         payload.version = version;
     else
@@ -31775,7 +31780,7 @@ const guidance = {
 const mismatch = () => new ActionError('Quadraticc returned an invalid or mismatched build acknowledgement. The build may already exist; inspect build history before retrying an explicit version.');
 function acknowledged(prepared, reply) {
     const { payload } = prepared;
-    const accepted = reply.status === 201 || Boolean(payload.version_prefix) && reply.status === 200;
+    const accepted = reply.status === 201 || Boolean(payload.version_prefix || prepared.existingBuildID) && reply.status === 200;
     if (!accepted) {
         const message = reply.status >= 300 && reply.status < 400 ? 'Redirects are refused; use the final HTTPS origin.' :
             guidance[reply.status] ?? 'The build may already exist. Inspect build history before retrying an explicit version.';
@@ -31792,6 +31797,8 @@ function acknowledged(prepared, reply) {
     catch {
         throw mismatch();
     }
+    if (payload.is_release && data.is_release !== true || data.is_release != null && typeof data.is_release !== 'boolean' || prepared.existingBuildID && data.id !== prepared.existingBuildID)
+        throw mismatch();
     if (typeof data.id !== 'string' || !uuid.test(data.id) || typeof data.version !== 'string' ||
         !validVersion(data.version) || data.commit_sha !== payload.commit_sha ||
         (data.branch ?? '') !== (payload.branch ?? '') || 'image_reference' in data || 'build_notes' in data ||
@@ -31813,14 +31820,42 @@ function acknowledged(prepared, reply) {
     const source = data.workflow_run;
     if (payload.workflow_run ? !source || source.repository_id !== payload.workflow_run.repository_id || source.run_id !== payload.workflow_run.run_id : source != null)
         throw mismatch();
-    return { id: data.id, version: data.version, commit: payload.commit_sha, images: payload.images ?? {}, metadata: payload.metadata ?? {},
+    return { isRelease: data.is_release === true, id: data.id, version: data.version, commit: payload.commit_sha, images: payload.images ?? {}, metadata: payload.metadata ?? {},
         branch: payload.branch ?? '', created: reply.status === 201,
         url: `${prepared.origin}/workspaces/${prepared.workspace}/projects/${prepared.project}/builds?build=${data.id}` };
 }
 async function createBuild(values, env, send = postJSON) {
+    if (values['build-id'])
+        return markExistingBuild(values, send);
     const prepared = prepare(values, env);
     const reply = await send(prepared.endpoint, prepared.token, JSON.stringify(prepared.payload));
     return acknowledged(prepared, reply);
+}
+async function markExistingBuild(values, send) {
+    const id = values['build-id'].toLowerCase();
+    if (!uuid.test(id))
+        inputError('build-id', 'must be a build UUID');
+    if (values['is-release'] !== 'true' || values.version || values['version-prefix'] || values['version-suffix'] || values.images || values.metadata || values['link-workflow-run'] === 'true') {
+        throw new ActionError('build-id requires is-release: true and cannot be combined with version inputs, images, metadata or workflow linking.');
+    }
+    // Validate location and credential before the sole network request. Context
+    // defaults describe the current workflow, not the existing build's artifact.
+    const base = prepare({ ...values, version: '0.0.0', 'commit-sha': '0'.repeat(40), branch: '' }, {});
+    const endpoint = new URL(`/api/v1/workspaces/${base.workspace}/projects/${base.project}/builds/${id}/release`, base.origin);
+    const reply = await send(endpoint, base.token, '{}');
+    if (reply.status !== 200)
+        throw new ActionError(`Quadraticc returned HTTP ${reply.status}. Release status could not be confirmed; inspect build history before retrying.`);
+    let data;
+    try {
+        data = JSON.parse(reply.body);
+    }
+    catch {
+        throw mismatch();
+    }
+    if (!data || typeof data !== 'object' || Array.isArray(data) || data.id !== id || data.is_release !== true || typeof data.version !== 'string' || typeof data.commit_sha !== 'string' || data.branch != null && typeof data.branch !== 'string')
+        throw mismatch();
+    const checked = prepare({ ...values, version: data.version, 'commit-sha': data.commit_sha, branch: data.branch ?? '', images: JSON.stringify(data.images ?? {}), metadata: JSON.stringify(data.metadata ?? {}) }, {});
+    return acknowledged({ ...checked, existingBuildID: id }, reply);
 }
 
 ;// CONCATENATED MODULE: ./build/action.js
@@ -31835,15 +31870,15 @@ async function run(toolkit = core_namespaceObject, environment = process.env, se
             toolkit.setSecret(token);
         const values = { token };
         for (const key of ['url', 'workspace-id', 'project-id', 'version', 'version-prefix', 'version-suffix', 'branch',
-            'commit-sha', 'images', 'metadata', 'link-workflow-run']) {
+            'commit-sha', 'images', 'metadata', 'link-workflow-run', 'is-release', 'build-id']) {
             values[key] = toolkit.getInput(key, { trimWhitespace: false });
         }
         const build = await createBuild(values, environment, send);
-        const outputs = { 'build-id': build.id, version: build.version,
+        const outputs = { 'is-release': String(build.isRelease), 'build-id': build.id, version: build.version,
             'commit-sha': build.commit, branch: build.branch, images: JSON.stringify(build.images), metadata: JSON.stringify(build.metadata), url: build.url, created: String(build.created) };
         for (const [key, value] of Object.entries(outputs))
             toolkit.setOutput(key, value);
-        toolkit.info(build.created ? 'Quadraticc build created.' : 'Identical Quadraticc build reused.');
+        toolkit.info(values['build-id'] ? 'Quadraticc build marked as a release.' : build.created ? 'Quadraticc build created.' : 'Identical Quadraticc build reused.');
     }
     catch (error) {
         toolkit.setFailed(error instanceof ActionError ? error.message : 'The build action could not complete. No provider response or credentials were logged; inspect build history before retrying an explicit version.');
