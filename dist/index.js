@@ -429,7 +429,7 @@ __webpack_unused_export__ = getCookies
 __webpack_unused_export__ = getSetCookies
 __webpack_unused_export__ = setCookie
 
-const { parseMIMEType, serializeAMimeType } = __nccwpck_require__(9519)
+const { parseMIMEType, serializeAMimeType } = __nccwpck_require__(1900)
 
 __webpack_unused_export__ = parseMIMEType
 __webpack_unused_export__ = serializeAMimeType
@@ -13190,7 +13190,7 @@ module.exports = {
 
 
 const assert = __nccwpck_require__(4589)
-const { URLSerializer } = __nccwpck_require__(9519)
+const { URLSerializer } = __nccwpck_require__(1900)
 const { isValidHeaderName } = __nccwpck_require__(3168)
 
 /**
@@ -13453,7 +13453,7 @@ module.exports = {
 
 const { maxNameValuePairSize, maxAttributeValueSize } = __nccwpck_require__(1276)
 const { isCTLExcludingHtab } = __nccwpck_require__(7797)
-const { collectASequenceOfCodePointsFast } = __nccwpck_require__(9519)
+const { collectASequenceOfCodePointsFast } = __nccwpck_require__(1900)
 const assert = __nccwpck_require__(4589)
 
 /**
@@ -14632,7 +14632,7 @@ const { fetching } = __nccwpck_require__(4398)
 const { makeRequest } = __nccwpck_require__(9967)
 const { webidl } = __nccwpck_require__(5893)
 const { EventSourceStream } = __nccwpck_require__(4031)
-const { parseMIMEType } = __nccwpck_require__(9519)
+const { parseMIMEType } = __nccwpck_require__(1900)
 const { createFastMessageEvent } = __nccwpck_require__(5188)
 const { isNetworkError } = __nccwpck_require__(9051)
 const { delay } = __nccwpck_require__(4811)
@@ -15176,7 +15176,7 @@ const { Blob } = __nccwpck_require__(4573)
 const assert = __nccwpck_require__(4589)
 const { isErrored, isDisturbed } = __nccwpck_require__(7075)
 const { isArrayBuffer } = __nccwpck_require__(3429)
-const { serializeAMimeType } = __nccwpck_require__(9519)
+const { serializeAMimeType } = __nccwpck_require__(1900)
 const { multipartFormDataParser } = __nccwpck_require__(116)
 let random
 
@@ -15820,7 +15820,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 9519:
+/***/ 1900:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
@@ -16764,7 +16764,7 @@ module.exports = { FileLike, isFileLike }
 
 const { isUSVString, bufferToLowerCasedHeaderName } = __nccwpck_require__(3440)
 const { utf8DecodeBytes } = __nccwpck_require__(3168)
-const { HTTP_TOKEN_CODEPOINTS, isomorphicDecode } = __nccwpck_require__(9519)
+const { HTTP_TOKEN_CODEPOINTS, isomorphicDecode } = __nccwpck_require__(1900)
 const { isFileLike } = __nccwpck_require__(7114)
 const { makeEntry } = __nccwpck_require__(5910)
 const assert = __nccwpck_require__(4589)
@@ -18303,7 +18303,7 @@ const {
 const EE = __nccwpck_require__(8474)
 const { Readable, pipeline, finished } = __nccwpck_require__(7075)
 const { addAbortListener, isErrored, isReadable, bufferToLowerCasedHeaderName } = __nccwpck_require__(3440)
-const { dataURLProcessor, serializeAMimeType, minimizeSupportedMimeType } = __nccwpck_require__(9519)
+const { dataURLProcessor, serializeAMimeType, minimizeSupportedMimeType } = __nccwpck_require__(1900)
 const { getGlobalDispatcher } = __nccwpck_require__(2581)
 const { webidl } = __nccwpck_require__(5893)
 const { STATUS_CODES } = __nccwpck_require__(7067)
@@ -20547,7 +20547,7 @@ const {
 const { kEnumerableProperty, normalizedMethodRecordsBase, normalizedMethodRecords } = util
 const { kHeaders, kSignal, kState, kDispatcher } = __nccwpck_require__(3627)
 const { webidl } = __nccwpck_require__(5893)
-const { URLSerializer } = __nccwpck_require__(9519)
+const { URLSerializer } = __nccwpck_require__(1900)
 const { kConstruct } = __nccwpck_require__(6443)
 const assert = __nccwpck_require__(4589)
 const { getMaxListeners, setMaxListeners, getEventListeners, defaultMaxListeners } = __nccwpck_require__(8474)
@@ -21588,7 +21588,7 @@ const {
 const { kState, kHeaders } = __nccwpck_require__(3627)
 const { webidl } = __nccwpck_require__(5893)
 const { FormData } = __nccwpck_require__(5910)
-const { URLSerializer } = __nccwpck_require__(9519)
+const { URLSerializer } = __nccwpck_require__(1900)
 const { kConstruct } = __nccwpck_require__(6443)
 const assert = __nccwpck_require__(4589)
 const { types } = __nccwpck_require__(7975)
@@ -22203,7 +22203,7 @@ const { Transform } = __nccwpck_require__(7075)
 const zlib = __nccwpck_require__(8522)
 const { redirectStatusSet, referrerPolicySet: referrerPolicyTokens, badPortsSet } = __nccwpck_require__(4495)
 const { getGlobalOrigin } = __nccwpck_require__(1059)
-const { collectASequenceOfCodePoints, collectAnHTTPQuotedString, removeChars, parseMIMEType } = __nccwpck_require__(9519)
+const { collectASequenceOfCodePoints, collectAnHTTPQuotedString, removeChars, parseMIMEType } = __nccwpck_require__(1900)
 const { performance } = __nccwpck_require__(643)
 const { isBlobLike, ReadableStreamFrom, isValidHTTPToken, normalizedMethodRecordsBase } = __nccwpck_require__(3440)
 const assert = __nccwpck_require__(4589)
@@ -25299,7 +25299,7 @@ const {
 } = __nccwpck_require__(961)
 const { ProgressEvent } = __nccwpck_require__(8573)
 const { getEncoding } = __nccwpck_require__(2607)
-const { serializeAMimeType, parseMIMEType } = __nccwpck_require__(9519)
+const { serializeAMimeType, parseMIMEType } = __nccwpck_require__(1900)
 const { types } = __nccwpck_require__(7975)
 const { StringDecoder } = __nccwpck_require__(3193)
 const { btoa } = __nccwpck_require__(4573)
@@ -27344,7 +27344,7 @@ const { kReadyState, kController, kResponse, kBinaryType, kWebSocketURL } = __nc
 const { states, opcodes } = __nccwpck_require__(736)
 const { ErrorEvent, createFastMessageEvent } = __nccwpck_require__(5188)
 const { isUtf8 } = __nccwpck_require__(4573)
-const { collectASequenceOfCodePointsFast, removeHTTPWhitespace } = __nccwpck_require__(9519)
+const { collectASequenceOfCodePointsFast, removeHTTPWhitespace } = __nccwpck_require__(1900)
 
 /* globals Blob */
 
@@ -27670,7 +27670,7 @@ module.exports = {
 
 
 const { webidl } = __nccwpck_require__(5893)
-const { URLSerializer } = __nccwpck_require__(9519)
+const { URLSerializer } = __nccwpck_require__(1900)
 const { environmentSettingsObject } = __nccwpck_require__(3168)
 const { staticPropertyDescriptors, states, sentCloseFrameState, sendHints } = __nccwpck_require__(736)
 const {
@@ -31552,13 +31552,19 @@ function getIDToken(aud) {
  */
 
 //# sourceMappingURL=core.js.map
+;// CONCATENATED MODULE: external "node:fs"
+const external_node_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
+;// CONCATENATED MODULE: external "node:fs/promises"
+const promises_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs/promises");
+;// CONCATENATED MODULE: external "node:path"
+const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
 ;// CONCATENATED MODULE: external "node:https"
 const external_node_https_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:https");
 ;// CONCATENATED MODULE: ./build/http.js
 
 class ActionError extends Error {
 }
-const ambiguity = 'The build may already exist. No automatic retry was made; inspect build history before retrying an explicit version.';
+const ambiguity = 'The build or report may already exist. No automatic retry was made; inspect build history before retrying an explicit version. Test uploads must reuse the same upload ID and identical report and metadata.';
 const maximumResponseBytes = 64 * 1024;
 const transportCodes = new Set(['ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED', 'ECONNRESET',
     'ETIMEDOUT', 'ENETUNREACH', 'EHOSTUNREACH', 'CERT_HAS_EXPIRED',
@@ -31692,7 +31698,7 @@ function sameMap(actual, expected) {
         Object.keys(actual).length === Object.keys(wanted).length &&
         Object.entries(wanted).every(([key, value]) => Object.hasOwn(actual, key) && actual[key] === value);
 }
-function prepare(values, env) {
+function connection(values) {
     const rawURL = values.url ?? '';
     let parsed;
     try {
@@ -31712,6 +31718,29 @@ function prepare(values, env) {
         inputError('token', 'must be a project CI credential');
     const workspace = identifier(values['workspace-id'] ?? '', 'workspace-id');
     const project = identifier(values['project-id'] ?? '', 'project-id');
+    return { origin, workspace, project, token };
+}
+function workflowSource(values, env) {
+    const link = values['link-workflow-run'] || 'false';
+    if (!['true', 'false'].includes(link))
+        inputError('link-workflow-run', 'must be true or false');
+    if (link === 'false')
+        return undefined;
+    if (env.GITHUB_SERVER_URL !== 'https://github.com')
+        throw new ActionError('Workflow linking currently supports GitHub.com runs only.');
+    return { repository_id: positiveID(env.GITHUB_REPOSITORY_ID), run_id: positiveID(env.GITHUB_RUN_ID) };
+}
+function artifactSource(values, env) {
+    const commit = values['commit-sha'] || env.GITHUB_SHA || '';
+    if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(commit))
+        inputError('commit-sha', 'must be a full 40- or 64-character hexadecimal commit SHA');
+    const branch = values.branch || env.GITHUB_HEAD_REF || env.GITHUB_REF_NAME || '';
+    if (!wellFormed(branch) || Buffer.byteLength(branch) > 255 || branch.trim() !== branch || controls.test(branch))
+        inputError('branch', 'must fit within 255 bytes without surrounding whitespace or control characters');
+    return { commit_sha: commit, branch };
+}
+function prepare(values, env) {
+    const { origin, workspace, project, token } = connection(values);
     const version = values.version ?? '';
     const prefix = values['version-prefix'] ?? '';
     if (Boolean(version) === Boolean(prefix)) {
@@ -31722,24 +31751,17 @@ function prepare(values, env) {
     if (prefix && (!/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.$/.test(prefix) || prefix.length > 98)) {
         inputError('version-prefix', 'must be a canonical major.minor. prefix, such as 0.0.');
     }
-    const commit = values['commit-sha'] || env.GITHUB_SHA || '';
-    if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(commit))
-        inputError('commit-sha', 'must be a full 40- or 64-character hexadecimal commit SHA');
+    const { commit_sha: commit, branch } = artifactSource(values, env);
     const images = mapInput(values.images, 'images');
     const metadata = mapInput(values.metadata, 'metadata');
     if (values['image-reference'] || values['build-notes'])
         throw new ActionError('The image-reference and build-notes inputs were removed; use named images.');
     if (Buffer.byteLength(JSON.stringify([images ?? {}, metadata ?? {}])) > 12000)
         throw new ActionError('Encoded images and metadata must fit within 12000 bytes.');
-    const branch = values.branch || env.GITHUB_HEAD_REF || env.GITHUB_REF_NAME || '';
-    if (!wellFormed(branch) || Buffer.byteLength(branch) > 255 || branch.trim() !== branch || controls.test(branch))
-        inputError('branch', 'must fit within 255 bytes without surrounding whitespace or control characters');
     const suffix = values['version-suffix'] || '';
     if (suffix && (!prefix || !/^[-+]/.test(suffix) || !validVersion(prefix + '1' + suffix)))
         inputError('version-suffix', 'must form a valid semantic version with version-prefix');
-    const link = values['link-workflow-run'] || 'false';
-    if (!['true', 'false'].includes(link))
-        inputError('link-workflow-run', 'must be true or false');
+    const workflow = workflowSource(values, env);
     const release = values['is-release'] || 'false';
     if (!['true', 'false'].includes(release))
         inputError('is-release', 'must be true or false');
@@ -31758,11 +31780,8 @@ function prepare(values, env) {
         payload.images = images;
     if (metadata)
         payload.metadata = metadata;
-    if (link === 'true') {
-        if (env.GITHUB_SERVER_URL !== 'https://github.com')
-            throw new ActionError('Workflow linking currently supports GitHub.com runs only.');
-        payload.workflow_run = { repository_id: positiveID(env.GITHUB_REPOSITORY_ID), run_id: positiveID(env.GITHUB_RUN_ID) };
-    }
+    if (workflow)
+        payload.workflow_run = workflow;
     if (Buffer.byteLength(JSON.stringify(payload)) > 32768)
         throw new ActionError('The encoded build request exceeds the 32 KiB API limit.');
     const endpoint = new URL(`/api/v1/workspaces/${workspace}/projects/${project}/builds${prefix ? '/next' : ''}`, origin);
@@ -31858,7 +31877,119 @@ async function markExistingBuild(values, send) {
     return acknowledged({ ...checked, existingBuildID: id }, reply);
 }
 
+;// CONCATENATED MODULE: ./build/reports.js
+
+
+
+
+
+const maximumReportBytes = 8 * 1024 * 1024;
+const reports_ambiguity = 'The report may already exist. No automatic retry was made; retry only with the same upload ID and identical report and metadata.';
+const invalidReceipt = () => new ActionError(`Quadraticc returned an invalid test report receipt. ${reports_ambiguity}`);
+const boundedText = (value, limit) => Boolean(value) &&
+    Buffer.byteLength(value) <= limit && !/\p{Cc}|[\uD800-\uDFFF]/u.test(value);
+async function readReport(path) {
+    try {
+        const file = await (0,promises_namespaceObject.open)(path, external_node_fs_namespaceObject.constants.O_RDONLY | external_node_fs_namespaceObject.constants.O_NONBLOCK);
+        try {
+            const stat = await file.stat();
+            if (!stat.isFile() || stat.size > maximumReportBytes)
+                throw new Error();
+            // Bound the read even if a producer is still writing to the file.
+            const buffer = Buffer.alloc(maximumReportBytes + 1);
+            let size = 0;
+            while (size < buffer.length) {
+                const { bytesRead } = await file.read(buffer, size, buffer.length - size, null);
+                if (!bytesRead)
+                    break;
+                size += bytesRead;
+            }
+            if (!size || size > maximumReportBytes)
+                throw new Error();
+            // Preserve a leading BOM and reject invalid UTF-8 instead of replacing bytes.
+            return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(buffer.subarray(0, size));
+        }
+        finally {
+            await file.close();
+        }
+    }
+    catch {
+        throw new ActionError('Input test-results-file must name a readable, nonempty UTF-8 report file of at most 8 MiB.');
+    }
+}
+async function uploadTestResults(values, env, send = postJSON) {
+    const { origin, workspace, project, token } = connection(values);
+    if (['version', 'version-prefix', 'version-suffix', 'build-id', 'images', 'metadata'].some(key => values[key]) ||
+        values['is-release'] && values['is-release'] !== 'false') {
+        throw new ActionError('Test result uploads cannot be combined with build registration or release inputs. Use separate action steps.');
+    }
+    const source = artifactSource(values, env);
+    if (!source.branch)
+        throw new ActionError('Input branch is required for test result uploads.');
+    const format = values['test-results-format'] || 'junit';
+    if (!['junit', 'trx'].includes(format))
+        throw new ActionError('Input test-results-format must be junit or trx.');
+    const filename = (0,external_node_path_namespaceObject.basename)(values['test-results-file'] || '');
+    if (!boundedText(filename, 255) || /[/\\]/.test(filename) || ['.', '..'].includes(filename)) {
+        throw new ActionError('Input test-results-file must have a basename of at most 255 bytes.');
+    }
+    const workflow = workflowSource(values, env);
+    const workflowID = values['workflow-run-id'] || '';
+    if (workflowID && (!uuid.test(workflowID) || workflow)) {
+        throw new ActionError('Input workflow-run-id must be a Quadraticc workflow run UUID and cannot be combined with link-workflow-run.');
+    }
+    let uploadID = values['test-results-upload-id'] || '';
+    if (!uploadID) {
+        if (![env.GITHUB_RUN_ID, env.GITHUB_RUN_ATTEMPT].every(value => value && /^[1-9][0-9]*$/.test(value))) {
+            throw new ActionError('Input test-results-upload-id is required without a GitHub run ID and attempt.');
+        }
+        uploadID = `${env.GITHUB_RUN_ID}/${env.GITHUB_RUN_ATTEMPT}/${filename}`;
+    }
+    if (!boundedText(uploadID, 200))
+        throw new ActionError('Input test-results-upload-id must be 1–200 UTF-8 bytes without control characters.');
+    const report = await readReport(values['test-results-file'] || '');
+    const payload = { upload_id: uploadID, filename, format, ...source, report,
+        ...(workflow ? { workflow_run: workflow } : {}),
+        ...(workflowID ? { workflow_run_id: workflowID.toLowerCase() } : {}) };
+    const endpoint = new URL(`/api/v1/workspaces/${workspace}/projects/${project}/test-results`, origin);
+    const reply = await send(endpoint, token, JSON.stringify(payload));
+    if (![200, 201].includes(reply.status)) {
+        const guidance = {
+            400: 'Check report XML, format, metadata, workflow association and API parsing limits.',
+            401: 'Check the project CI credential; it may be invalid or revoked.',
+            403: 'Check project scope and workspace lifecycle.',
+            404: 'Check the URL and server support for test result ingestion.',
+            409: 'The upload ID already exists with different content or metadata. Use distinct IDs for distinct reports or attempts.',
+            413: 'The report exceeds the server size limit.',
+            415: 'The server did not accept the JSON request.',
+            429: 'The API rate limit was reached. Wait before retrying.',
+        };
+        const message = reply.status >= 300 && reply.status < 400 ? 'Redirects are refused; use the final HTTPS origin.' : guidance[reply.status] || reports_ambiguity;
+        throw new ActionError(`Quadraticc returned HTTP ${reply.status}. ${message}`);
+    }
+    if (reply.contentType.split(';')[0]?.trim().toLowerCase() !== 'application/json')
+        throw invalidReceipt();
+    let data;
+    try {
+        data = JSON.parse(reply.body);
+    }
+    catch {
+        throw invalidReceipt();
+    }
+    if (!data || typeof data !== 'object' || Array.isArray(data))
+        throw invalidReceipt();
+    const receipt = data;
+    if (typeof receipt.id !== 'string' || !uuid.test(receipt.id) ||
+        !['total', 'passed', 'failed', 'errors', 'skipped'].every(key => Number.isInteger(receipt[key]) && Number(receipt[key]) >= 0 && Number(receipt[key]) <= 10_000) ||
+        receipt.total !== Number(receipt.passed) + Number(receipt.failed) + Number(receipt.errors) + Number(receipt.skipped))
+        throw invalidReceipt();
+    // Emit only validated receipt fields, never arbitrary provider response data.
+    return { id: receipt.id, total: Number(receipt.total), passed: Number(receipt.passed),
+        failed: Number(receipt.failed), errors: Number(receipt.errors), skipped: Number(receipt.skipped) };
+}
+
 ;// CONCATENATED MODULE: ./build/action.js
+
 
 
 
@@ -31870,8 +32001,19 @@ async function run(toolkit = core_namespaceObject, environment = process.env, se
             toolkit.setSecret(token);
         const values = { token };
         for (const key of ['url', 'workspace-id', 'project-id', 'version', 'version-prefix', 'version-suffix', 'branch',
-            'commit-sha', 'images', 'metadata', 'link-workflow-run', 'is-release', 'build-id']) {
+            'commit-sha', 'images', 'metadata', 'link-workflow-run', 'is-release', 'build-id',
+            'test-results-file', 'test-results-format', 'test-results-upload-id', 'workflow-run-id']) {
             values[key] = toolkit.getInput(key, { trimWhitespace: false });
+        }
+        if (values['test-results-file']) {
+            const receipt = await uploadTestResults(values, environment, send);
+            toolkit.setOutput('test-report-id', receipt.id);
+            toolkit.setOutput('test-results', JSON.stringify(receipt));
+            toolkit.info('Quadraticc test report accepted.');
+            return;
+        }
+        if (values['test-results-upload-id'] || values['workflow-run-id'] || values['test-results-format'] && values['test-results-format'] !== 'junit') {
+            throw new ActionError('Test result options require test-results-file.');
         }
         const build = await createBuild(values, environment, send);
         const outputs = { 'is-release': String(build.isRelease), 'build-id': build.id, version: build.version,
@@ -31881,7 +32023,7 @@ async function run(toolkit = core_namespaceObject, environment = process.env, se
         toolkit.info(values['build-id'] ? 'Quadraticc build marked as a release.' : build.created ? 'Quadraticc build created.' : 'Identical Quadraticc build reused.');
     }
     catch (error) {
-        toolkit.setFailed(error instanceof ActionError ? error.message : 'The build action could not complete. No provider response or credentials were logged; inspect build history before retrying an explicit version.');
+        toolkit.setFailed(error instanceof ActionError ? error.message : 'The action could not complete. No provider response or credentials were logged; inspect build/report history before retrying. Test uploads must reuse the same upload ID and identical content.');
     }
 }
 

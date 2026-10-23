@@ -1,5 +1,5 @@
-name: Create a Quadraticc build
-description: Register a build with an explicit version or let Quadraticc allocate the next version.
+name: Create a Quadraticc build or upload test results
+description: Register a build or upload a JUnit/TRX test report with optional workflow provenance.
 author: Quadraticc
 branding:
   icon: package
@@ -39,9 +39,22 @@ inputs:
   metadata:
     description: Optional JSON object of non-secret string metadata, such as migration_name.
   link-workflow-run:
-    description: Associate this GitHub.com run with a repository already connected to this Quadraticc project.
+    description: Associate this build or test report with the current GitHub.com run in a repository already connected to this Quadraticc project.
     default: 'false'
+  test-results-file:
+    description: Path to one UTF-8 JUnit/TRX XML report, at most 8 MiB. Selects upload-only mode; omit build registration/release inputs.
+  test-results-format:
+    description: Report format, junit or trx. Used with test-results-file.
+    default: junit
+  test-results-upload-id:
+    description: Retry key of 1–200 UTF-8 bytes. Defaults to run ID/attempt/report basename. Use distinct IDs for separate reports and attempts; preserve the ID and payload for retries.
+  workflow-run-id:
+    description: Optional Quadraticc workflow run UUID for test uploads. Cannot be combined with link-workflow-run.
 outputs:
+  test-report-id:
+    description: Accepted test report UUID (upload mode only).
+  test-results:
+    description: JSON receipt containing id, total, passed, failed, errors and skipped (upload mode only).
   is-release:
     description: Whether the acknowledged build is a release.
   build-id:

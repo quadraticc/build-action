@@ -35,7 +35,7 @@ export interface Result {
   created: boolean;
 }
 
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const controls = /\p{Cc}/u;
 const wellFormed = (value: string) => !/[\uD800-\uDFFF]/u.test(value);
 const validVersion = (value: string) => Buffer.byteLength(value) <= 100 &&
@@ -80,7 +80,7 @@ function sameMap(actual: unknown, expected: Record<string, string> | undefined):
     Object.entries(wanted).every(([key, value]) => Object.hasOwn(actual, key) && (actual as Record<string, unknown>)[key] === value);
 }
 
-export function prepare(values: Values, env: Environment): Prepared {
+export function connection(values: Values): Pick<Prepared, 'origin' | 'workspace' | 'project' | 'token'> {
   const rawURL = values.url ?? '';
   let parsed: URL;
   try { parsed = new URL(rawURL); } catch { return inputError('url', 'must be an HTTPS origin'); }
@@ -94,6 +94,27 @@ export function prepare(values: Values, env: Environment): Prepared {
   if (!/^qcc_[A-Za-z0-9_-]{43}$/.test(token)) inputError('token', 'must be a project CI credential');
   const workspace = identifier(values['workspace-id'] ?? '', 'workspace-id');
   const project = identifier(values['project-id'] ?? '', 'project-id');
+  return {origin, workspace, project, token};
+}
+
+export function workflowSource(values: Values, env: Environment): WorkflowSource | undefined {
+  const link = values['link-workflow-run'] || 'false';
+  if (!['true', 'false'].includes(link)) inputError('link-workflow-run', 'must be true or false');
+  if (link === 'false') return undefined;
+  if (env.GITHUB_SERVER_URL !== 'https://github.com') throw new ActionError('Workflow linking currently supports GitHub.com runs only.');
+  return {repository_id: positiveID(env.GITHUB_REPOSITORY_ID), run_id: positiveID(env.GITHUB_RUN_ID)};
+}
+
+export function artifactSource(values: Values, env: Environment): {commit_sha: string; branch: string} {
+  const commit = values['commit-sha'] || env.GITHUB_SHA || '';
+  if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(commit)) inputError('commit-sha', 'must be a full 40- or 64-character hexadecimal commit SHA');
+  const branch = values.branch || env.GITHUB_HEAD_REF || env.GITHUB_REF_NAME || '';
+  if (!wellFormed(branch) || Buffer.byteLength(branch) > 255 || branch.trim() !== branch || controls.test(branch)) inputError('branch', 'must fit within 255 bytes without surrounding whitespace or control characters');
+  return {commit_sha: commit, branch};
+}
+
+export function prepare(values: Values, env: Environment): Prepared {
+  const {origin, workspace, project, token} = connection(values);
   const version = values.version ?? '';
   const prefix = values['version-prefix'] ?? '';
   if (Boolean(version) === Boolean(prefix)) {
@@ -103,18 +124,14 @@ export function prepare(values: Values, env: Environment): Prepared {
   if (prefix && (!/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.$/.test(prefix) || prefix.length > 98)) {
     inputError('version-prefix', 'must be a canonical major.minor. prefix, such as 0.0.');
   }
-  const commit = values['commit-sha'] || env.GITHUB_SHA || '';
-  if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(commit)) inputError('commit-sha', 'must be a full 40- or 64-character hexadecimal commit SHA');
+  const {commit_sha: commit, branch} = artifactSource(values, env);
   const images = mapInput(values.images, 'images');
   const metadata = mapInput(values.metadata, 'metadata');
   if (values['image-reference'] || values['build-notes']) throw new ActionError('The image-reference and build-notes inputs were removed; use named images.');
   if (Buffer.byteLength(JSON.stringify([images ?? {}, metadata ?? {}])) > 12000) throw new ActionError('Encoded images and metadata must fit within 12000 bytes.');
-  const branch = values.branch || env.GITHUB_HEAD_REF || env.GITHUB_REF_NAME || '';
-  if (!wellFormed(branch) || Buffer.byteLength(branch) > 255 || branch.trim() !== branch || controls.test(branch)) inputError('branch', 'must fit within 255 bytes without surrounding whitespace or control characters');
   const suffix = values['version-suffix'] || '';
   if (suffix && (!prefix || !/^[-+]/.test(suffix) || !validVersion(prefix + '1' + suffix))) inputError('version-suffix', 'must form a valid semantic version with version-prefix');
-  const link = values['link-workflow-run'] || 'false';
-  if (!['true', 'false'].includes(link)) inputError('link-workflow-run', 'must be true or false');
+  const workflow = workflowSource(values, env);
   const release = values['is-release'] || 'false';
   if (!['true', 'false'].includes(release)) inputError('is-release', 'must be true or false');
   const payload: Payload = {commit_sha: commit};
@@ -124,10 +141,7 @@ export function prepare(values: Values, env: Environment): Prepared {
   if (suffix) payload.version_suffix = suffix;
   if (images) payload.images = images;
   if (metadata) payload.metadata = metadata;
-  if (link === 'true') {
-    if (env.GITHUB_SERVER_URL !== 'https://github.com') throw new ActionError('Workflow linking currently supports GitHub.com runs only.');
-    payload.workflow_run = {repository_id: positiveID(env.GITHUB_REPOSITORY_ID), run_id: positiveID(env.GITHUB_RUN_ID)};
-  }
+  if (workflow) payload.workflow_run = workflow;
   if (Buffer.byteLength(JSON.stringify(payload)) > 32768) throw new ActionError('The encoded build request exceeds the 32 KiB API limit.');
   const endpoint = new URL(`/api/v1/workspaces/${workspace}/projects/${project}/builds${prefix ? '/next' : ''}`, origin);
   return {origin, workspace, project, token, payload, endpoint};
