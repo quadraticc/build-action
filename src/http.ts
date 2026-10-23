@@ -12,7 +12,7 @@ export interface Reply {
 export type RequestFactory = (url: URL, options: RequestOptions,
   callback: (response: IncomingMessage) => void) => ClientRequest;
 
-const ambiguity = 'The build may already exist. No automatic retry was made; inspect build history before retrying an explicit version.';
+const ambiguity = 'The build or report may already exist. No automatic retry was made; inspect build history before retrying an explicit version. Test uploads must reuse the same upload ID and identical report and metadata.';
 const maximumResponseBytes = 64 * 1024;
 const transportCodes = new Set(['ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED', 'ECONNRESET',
   'ETIMEDOUT', 'ENETUNREACH', 'EHOSTUNREACH', 'CERT_HAS_EXPIRED',

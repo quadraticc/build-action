@@ -148,3 +148,46 @@ test('the committed action bundle runs standalone and writes safe, multiline Git
   assert.ok(!visible.includes(values.token));
   assert.ok(!visible.includes('::warning::plain metadata'));
 });
+
+test('the standalone bundle uploads reports over verified HTTPS and emits receipt outputs', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'quadraticc-upload-bundle-'));
+  t.after(() => rm(directory, {recursive: true, force: true}));
+  const ca = join(directory, 'public-ca.pem'), output = join(directory, 'outputs'), file = join(directory, 'results.trx');
+  const xml = '\uFEFF<TestRun><Results/></TestRun>\r\n';
+  await writeFile(ca, pems.cert);
+  await writeFile(output, '');
+  await writeFile(file, xml);
+  await cp(new URL('../dist/', import.meta.url), join(directory, 'dist'), {recursive: true});
+  let requests = 0;
+  const origin = await server(t, async (request, response) => {
+    requests++;
+    assert.equal(request.headers.authorization, `Bearer ${values.token}`);
+    assert.equal(request.headers['content-type'], 'application/json');
+    assert.equal(request.url, `/api/v1/workspaces/${values['workspace-id']}/projects/${values['project-id']}/test-results`);
+    const payload = await requestBody(request);
+    assert.equal(payload.report, xml);
+    assert.equal(payload.format, 'trx');
+    assert.equal(payload.upload_id, '123/1/results.trx');
+    assert.deepEqual(payload.workflow_run, {repository_id: 42, run_id: 123});
+    response.writeHead(200, {'content-type': 'application/json'});
+    response.end(JSON.stringify({id: values['project-id'], total: 0, passed: 0, failed: 0, errors: 0, skipped: 0}));
+  });
+  const context = {...process.env, ...env, NODE_OPTIONS: '', NODE_EXTRA_CA_CERTS: ca, GITHUB_OUTPUT: output};
+  delete context.NODE_TLS_REJECT_UNAUTHORIZED;
+  for (const key of Object.keys(context)) if (key.startsWith('INPUT_')) delete context[key];
+  for (const [key, value] of Object.entries({...values, url: origin.origin, 'version-prefix': '', images: '',
+    'test-results-file': file, 'test-results-format': 'trx', 'link-workflow-run': 'true'})) context[`INPUT_${key.toUpperCase()}`] = value;
+  const child = spawn(process.execPath, ['dist/index.js'], {cwd: directory, env: context});
+  let visible = '';
+  child.stdout.on('data', data => {visible += data;});
+  child.stderr.on('data', data => {visible += data;});
+  const [code] = await once(child, 'close');
+  assert.equal(code, 0, visible);
+  assert.equal(requests, 1);
+  const recorded = await readFile(output, 'utf8');
+  assert.match(recorded, /test-report-id<</);
+  assert.match(recorded, /test-results<</);
+  assert.ok(!recorded.includes('build-id'));
+  assert.ok(!recorded.includes(values.token));
+  assert.ok(!visible.includes('<TestRun>'));
+});

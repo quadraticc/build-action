@@ -5,7 +5,7 @@ build. Supply an explicit version or let the server allocate the next patch in a
 series such as `0.0.`. The action returns build information as step outputs.
 Build links open the service’s `/workspaces/...` pages directly.
 
-The action creates builds and can mark an existing build as a release.
+The action creates builds, marks existing builds as releases, or uploads test reports.
 Deployment is a separate operation. This action does not upload or build artifacts.
 
 ## Quick start
@@ -54,8 +54,8 @@ set the surrounding workflow's permissions according to its build requirements.
 | `token` | Yes | Project-scoped `qcc_...` CI credential, passed from GitHub Secrets. This is not a GitHub token. |
 | `workspace-id` | Yes | Workspace UUID. |
 | `project-id` | Yes | Project UUID. |
-| `version` | One version input | Semantic version of at most 100 ASCII bytes, such as `0.0.1-abc123`. |
-| `version-prefix` | One version input | Canonical `major.minor.` series, such as `0.0.` or `1.2.`. |
+| `version` | Build mode | Semantic version of at most 100 ASCII bytes, such as `0.0.1-abc123`. |
+| `version-prefix` | Build mode | Canonical `major.minor.` series, such as `0.0.` or `1.2.`. |
 | `commit-sha` | No | Full 40- or 64-character artifact commit SHA. Defaults to `${{ github.sha }}`. Override when the build uses a different commit. |
 | `branch` | No | Branch/tag name; defaults to the PR head or runner ref name. |
 | `version-suffix` | No | Optional SemVer suffix for `version-prefix`, such as `-${{ github.sha }}`. |
@@ -63,9 +63,13 @@ set the surrounding workflow's permissions according to its build requirements.
 | `metadata` | No | JSON object containing up to 64 non-secret string values, such as `migration_name`. |
 | `is-release` | No | `true` to mark the new or existing build as a release. Defaults to `false`. Release status is one-way. Requires server migration `0032_build_releases.sql`. |
 | `build-id` | No | Existing build UUID to promote instead of registering a build. Requires `is-release: 'true'`; omit version inputs, images, metadata and workflow linking. Context commit/branch defaults are ignored. |
-| `link-workflow-run` | No | `true` to associate the current GitHub.com repository/run with the build. Defaults to `false`. |
+| `link-workflow-run` | No | `true` to associate the current GitHub.com repository/run with the build or test report. Defaults to `false`. |
+| `test-results-file` | No | Path to one nonempty UTF-8 XML report, at most 8 MiB. Selects upload mode; omit version inputs, images, metadata, build-id and is-release. No glob expansion. |
+| `test-results-format` | No | `junit` (default) or `trx`. |
+| `test-results-upload-id` | No | Retry key, 1–200 UTF-8 bytes. Defaults to `<run ID>/<run attempt>/<report basename>`; required outside a GitHub run. |
+| `workflow-run-id` | No | Quadraticc workflow run UUID for test uploads, as an alternative to `link-workflow-run`. |
 
-The encoded JSON request is limited to 32 KiB. Versions follow SemVer 2.0.0 (no `v` prefix or leading zeros in numeric identifiers). Inputs go through
+The encoded build JSON request is limited to 32 KiB. Versions follow SemVer 2.0.0 (no `v` prefix or leading zeros in numeric identifiers). Inputs go through
 JSON serialization rather than shell interpolation.
 
 To record a pushed container image, add your build's digest, for example:
@@ -99,10 +103,70 @@ Metadata is readable by build viewers. Store credentials in environment secrets.
 Each image must be a complete registry/repository reference pinned with
 `@sha256:<64 lowercase hexadecimal characters>`.
 
+## Test result uploads
+
+Use a separate action step for each JUnit or Visual Studio TRX report. Uploads
+need no build registration or version. For example, run after tests even when
+they fail, provided a report was produced:
+
+```yaml
+- name: Upload test results
+  if: ${{ !cancelled() && hashFiles('test-results/results.xml') != '' }}
+  id: tests
+  uses: quadraticc/build-action@v1
+  with:
+    token: ${{ secrets.QUADRATICC_TOKEN }}
+    workspace-id: ${{ vars.WORKSPACE_ID }}
+    project-id: ${{ vars.PROJECT_ID }}
+    test-results-file: test-results/results.xml
+    test-results-format: junit
+    link-workflow-run: 'true'
+```
+
+Set `test-results-format: trx` for TRX. A checkout is unnecessary for build
+registration; uploads require the report file to be present on the runner.
+`branch` and `commit-sha` use the same context defaults as builds and can be
+overridden. A branch is required for reports. Workflow association is optional;
+`link-workflow-run` needs a connected GitHub.com repository. Alternatively,
+supply the project's Quadraticc `workflow-run-id` UUID, without workflow linking.
+Quadraticc resolves linked workflows and their initiating users; the action does
+not send or guess a user from GitHub's actor name. There is no caller-supplied
+user field in the [CI API contract](https://www.quadrati.cc/docs/ci-api/).
+
+New uploads return HTTP 201; exact replay with the same upload ID returns 200
+and the same receipt. A changed report or metadata with that ID returns 409.
+The default upload ID includes run ID, attempt and basename. Set an explicit
+`test-results-upload-id` for separate files with the same basename, multiple
+executions in one attempt, or uploads outside GitHub. Keep it within 200 UTF-8
+bytes (including the default); do not include secrets. For example:
+`${{ github.run_id }}/${{ github.run_attempt }}/linux-unit`.
+Use a new ID for each new execution/attempt; after a lost acknowledgement,
+retry with the original ID and identical report and metadata. Uploads never
+retry automatically.
+
+The server parses the XML; the action preserves its UTF-8 contents, including a
+leading BOM, and JSON-escapes it. The 8 MiB decoded report limit is independent
+of the 32 KiB build request limit. Server parsing limits are 10,000 cases, 64 XML
+levels, 200,000 elements and a conservative 32 MiB normalized-case JSON budget.
+DTDs, unsupported XML/outcomes and invalid durations are rejected. Empty suites
+are supported. Counts reflect actual test cases. Reports, names and captured
+output are visible to project build viewers: keep secrets out of report files.
+Reports appear on the project's **Tests** page, indexed by branch and commit;
+workflow discovery can resolve a link after upload.
+
+Upload success means the report was accepted, even if it contains failed tests.
+The action leaves test failure policy to the test step. Only `test-report-id`
+and `test-results` are emitted in upload mode; the latter is a JSON receipt such
+as `{"id":"report UUID","total":4,"passed":1,"failed":1,"errors":1,"skipped":1}`.
+No outputs are emitted on invalid receipts or upload failures. These receipts
+contain counts only; XML and provider response bodies are never logged.
+
 ## Outputs
 
 | Name | Value |
 | --- | --- |
+| `test-report-id` | Accepted report UUID, upload mode only. |
+| `test-results` | JSON receipt with id and test counts, upload mode only. |
 | `is-release` | `true` if the acknowledged build is a release, otherwise `false`. |
 | `build-id` | Build UUID. |
 | `version` | Explicit or server-assigned version. |
@@ -113,8 +177,8 @@ Each image must be a complete registry/repository reference pinned with
 | `url` | Link to the build in Quadraticc's project build history. |
 | `created` | String `true` for creation; `false` when numbered creation reuses an identical build. |
 
-No outputs are emitted until the server acknowledgement matches the submitted
-metadata and expected version. For a conditional next step, use
+In build mode, no outputs are emitted until the server acknowledgement matches
+the submitted metadata and expected version. For a conditional next step, use
 `if: steps.build.outputs.created == 'true'`.
 
 ## Optional workflow association
@@ -150,7 +214,7 @@ metadata: |
 
 Repeating the exact payload can recover a lost acknowledgement. The action no longer generates build notes. `image-reference` and `build-notes` inputs/outputs have been removed; use `images`.
 
-The action makes one request, verifies TLS, refuses redirects and bounds request
+Each action step makes one request, verifies TLS, refuses redirects and bounds request
 time and response size. It never automatically repeats an ambiguous creation.
 A timeout or server failure can happen after creation: inspect project history
 before retrying an explicit version. For automatic numbering, exact payload replay
